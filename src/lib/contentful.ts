@@ -11,6 +11,7 @@ export type CourseFields = {
   slug: string
   description?: string
   level?: string
+  category?: string
   coverUrl?: string
   videoUrl?: string
   videoStartTime?: number
@@ -53,6 +54,7 @@ export async function getCourses(): Promise<Array<{ id: string; fields: CourseFi
       slug: e.fields.slug,
       description: e.fields.description,
       level: e.fields.level,
+      category: e.fields.category,
       coverUrl: e.fields.cover?.fields?.file?.url ? 'https:' + e.fields.cover.fields.file.url : undefined,
       videoUrl: e.fields.videoUrl,
       videoStartTime: e.fields.videoStartTime,
@@ -69,6 +71,7 @@ export async function getCourseById(id: string): Promise<{ id: string; fields: C
       slug: e.fields.slug as string,
       description: e.fields.description as string | undefined,
       level: e.fields.level as string | undefined,
+      category: e.fields.category as string | undefined,
       coverUrl: (e.fields.cover as any)?.fields?.file?.url ? 'https:' + (e.fields.cover as any).fields.file.url : undefined,
       videoUrl: e.fields.videoUrl as string | undefined,
       videoStartTime: e.fields.videoStartTime as number | undefined,

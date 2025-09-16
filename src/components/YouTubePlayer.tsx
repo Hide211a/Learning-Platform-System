@@ -1,5 +1,6 @@
-import { Box, Typography, Alert, Chip } from '@mui/material'
 import { getYouTubeInfo, generateYouTubeEmbedUrl, getYouTubeThumbnails } from '../lib/youtube'
+import { Alert } from './ui/Alert'
+import { Chip } from './ui/Chip'
 
 interface YouTubePlayerProps {
   videoInput: string // Can be video ID or full YouTube URL
@@ -26,21 +27,21 @@ export function YouTubePlayer({
 
   if (!youtubeInfo) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        <Typography variant="h6" gutterBottom>Invalid YouTube Video</Typography>
-        <Typography variant="body2">
+      <Alert severity="error" className="mb-4">
+        <h6 className="text-lg font-semibold mb-2">Invalid YouTube Video</h6>
+        <p className="text-sm mb-2">
           Please provide a valid YouTube URL or video ID. 
           Supported formats:
-        </Typography>
-        <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+        </p>
+        <ul className="mt-2 pl-4 list-disc text-sm">
           <li>https://www.youtube.com/watch?v=VIDEO_ID</li>
           <li>https://youtu.be/VIDEO_ID</li>
           <li>https://youtube.com/shorts/VIDEO_ID</li>
           <li>VIDEO_ID (11 characters)</li>
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        </ul>
+        <p className="text-xs text-gray-500 mt-2">
           Provided input: "{videoInput}"
-        </Typography>
+        </p>
       </Alert>
     )
   }
@@ -58,71 +59,56 @@ export function YouTubePlayer({
   const thumbnails = getYouTubeThumbnails(youtubeInfo.videoId)
 
   return (
-    <Box>
+    <div>
       {/* Video Info */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <div className="flex items-center gap-2 mb-4">
         <Chip 
-          label={`YouTube ${youtubeInfo.urlType}`} 
-          size="small" 
-          color="primary" 
-          variant="outlined" 
-        />
+          size="sm"
+          variant="primary"
+        >
+          YouTube {youtubeInfo.urlType}
+        </Chip>
         {startTime && (
           <Chip 
-            label={`Starts at ${Math.floor(startTime / 60)}:${(startTime % 60).toString().padStart(2, '0')}`}
-            size="small" 
-            color="secondary" 
-            variant="outlined" 
-          />
+            size="sm"
+            variant="secondary"
+          >
+            Starts at {Math.floor(startTime / 60)}:{(startTime % 60).toString().padStart(2, '0')}
+          </Chip>
         )}
         {endTime && (
           <Chip 
-            label={`Ends at ${Math.floor(endTime / 60)}:${(endTime % 60).toString().padStart(2, '0')}`}
-            size="small" 
-            color="secondary" 
-            variant="outlined" 
-          />
+            size="sm"
+            variant="secondary"
+          >
+            Ends at {Math.floor(endTime / 60)}:{(endTime % 60).toString().padStart(2, '0')}
+          </Chip>
         )}
-      </Box>
+      </div>
 
       {/* Thumbnail Preview (optional) */}
       {showThumbnail && (
-        <Box sx={{ mb: 2, textAlign: 'center' }}>
+        <div className="mb-4 text-center">
           <img 
             src={thumbnails.high} 
             alt={`${title || 'Video'} thumbnail`}
-            style={{ 
-              maxWidth: '100%', 
-              height: 'auto', 
-              borderRadius: 8,
-              boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-            }}
+            className="max-w-full h-auto rounded-lg shadow-lg"
             onError={(e) => {
               // Fallback to default thumbnail if high quality fails
               const target = e.target as HTMLImageElement
               target.src = thumbnails.default
             }}
           />
-        </Box>
+        </div>
       )}
 
       {/* Video Player */}
-      <Box 
-        sx={{ 
-          position: 'relative', 
+      <div 
+        className="relative"
+        style={{ 
           width: width,
           height: height === 'auto' ? 0 : height,
           paddingBottom: height === 'auto' ? '56.25%' : 0, // 16:9 aspect ratio for auto height
-          '& iframe': {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            border: 0,
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-          }
         }}
       >
         <iframe
@@ -131,23 +117,24 @@ export function YouTubePlayer({
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           loading="lazy"
+          className="absolute top-0 left-0 w-full h-full border-0 rounded-lg shadow-lg"
         />
-      </Box>
+      </div>
 
       {/* Video Details */}
-      <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-        <Typography variant="body2" color="text.secondary">
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+        <p className="text-sm text-gray-600">
           <strong>Video ID:</strong> {youtubeInfo.videoId}
-        </Typography>
+        </p>
         {title && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <p className="text-sm text-gray-600 mt-1">
             <strong>Title:</strong> {title}
-          </Typography>
+          </p>
         )}
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        <p className="text-sm text-gray-600 mt-1">
           <strong>Source:</strong> YouTube ({youtubeInfo.urlType})
-        </Typography>
-      </Box>
-    </Box>
+        </p>
+      </div>
+    </div>
   )
 }

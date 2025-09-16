@@ -58,56 +58,96 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    try {
-      const savedProgress = localStorage.getItem(`progress_${user.uid}`)
-      const savedQuizResults = localStorage.getItem(`quizResults_${user.uid}`)
-      
-      if (savedProgress) {
-        const parsed = JSON.parse(savedProgress)
-        // Convert date strings back to Date objects
-        Object.keys(parsed).forEach(key => {
-          if (parsed[key].completedAt) {
-            parsed[key].completedAt = new Date(parsed[key].completedAt)
+    // Використовуємо requestIdleCallback для неблокуючого завантаження
+    const loadProgress = () => {
+      try {
+        const savedProgress = localStorage.getItem(`progress_${user.uid}`)
+        const savedQuizResults = localStorage.getItem(`quizResults_${user.uid}`)
+        
+        if (savedProgress) {
+          const parsed = JSON.parse(savedProgress)
+          // Оптимізуємо конвертацію дат
+          const progressEntries = Object.entries(parsed)
+          for (const [key, value] of progressEntries) {
+            if ((value as any).completedAt) {
+              (value as any).completedAt = new Date((value as any).completedAt)
+            }
           }
-        })
-        setLessonProgress(parsed)
+          setLessonProgress(parsed)
+        }
+        
+        if (savedQuizResults) {
+          const parsed = JSON.parse(savedQuizResults)
+          // Оптимізуємо конвертацію дат для quiz results
+          const results = []
+          for (const result of parsed) {
+            results.push({
+              ...result,
+              completedAt: new Date(result.completedAt)
+            })
+          }
+          setQuizResults(results)
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error)
+      } finally {
+        setIsLoading(false)
       }
-      
-      if (savedQuizResults) {
-        const parsed = JSON.parse(savedQuizResults)
-        // Convert date strings back to Date objects
-        const results = parsed.map((result: any) => ({
-          ...result,
-          completedAt: new Date(result.completedAt)
-        }))
-        setQuizResults(results)
-      }
-    } catch (error) {
-      console.error('Error loading progress:', error)
-    } finally {
-      setIsLoading(false)
+    }
+
+    // Використовуємо requestIdleCallback якщо доступний, інакше setTimeout
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(loadProgress)
+    } else {
+      setTimeout(loadProgress, 0)
     }
   }, [user])
 
-  // Save progress to localStorage whenever it changes
+  // Debounced save to localStorage to prevent excessive writes
   useEffect(() => {
     if (!user || isLoading) return
     
-    try {
-      localStorage.setItem(`progress_${user.uid}`, JSON.stringify(lessonProgress))
-    } catch (error) {
-      console.error('Error saving progress:', error)
-    }
+    const timeoutId = setTimeout(() => {
+      // Використовуємо requestIdleCallback для неблокуючого збереження
+      const saveProgress = () => {
+        try {
+          localStorage.setItem(`progress_${user.uid}`, JSON.stringify(lessonProgress))
+        } catch (error) {
+          console.error('Error saving progress:', error)
+        }
+      }
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(saveProgress)
+      } else {
+        setTimeout(saveProgress, 0)
+      }
+    }, 300) // Debounce by 300ms
+
+    return () => clearTimeout(timeoutId)
   }, [lessonProgress, user, isLoading])
 
   useEffect(() => {
     if (!user || isLoading) return
     
-    try {
-      localStorage.setItem(`quizResults_${user.uid}`, JSON.stringify(quizResults))
-    } catch (error) {
-      console.error('Error saving quiz results:', error)
-    }
+    const timeoutId = setTimeout(() => {
+      // Використовуємо requestIdleCallback для неблокуючого збереження
+      const saveQuizResults = () => {
+        try {
+          localStorage.setItem(`quizResults_${user.uid}`, JSON.stringify(quizResults))
+        } catch (error) {
+          console.error('Error saving quiz results:', error)
+        }
+      }
+
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(saveQuizResults)
+      } else {
+        setTimeout(saveQuizResults, 0)
+      }
+    }, 300) // Debounce by 300ms
+
+    return () => clearTimeout(timeoutId)
   }, [quizResults, user, isLoading])
 
   const markLessonComplete = (courseId: string, lessonId: string, timeSpent: number = 0) => {
@@ -159,52 +199,73 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     return lessonProgress[key] || null
   }
 
-  const getCourseProgress = (courseId: string): CourseProgress | null => {
-    const courseLessons = Object.values(lessonProgress).filter(p => p.courseId === courseId)
-    const courseQuizzes = quizResults.filter(r => r.courseId === courseId)
-    
-    if (courseLessons.length === 0 && courseQuizzes.length === 0) {
-      return null
+  const getCourseProgress = useMemo(() => {
+    return (courseId: string): CourseProgress | null => {
+      const courseLessons = Object.values(lessonProgress).filter(p => p.courseId === courseId)
+      const courseQuizzes = quizResults.filter(r => r.courseId === courseId)
+      
+      if (courseLessons.length === 0 && courseQuizzes.length === 0) {
+        return null
+      }
+
+      const completedLessons = courseLessons.filter(p => p.completed).length
+      const completedQuizzes = courseQuizzes.length
+      
+      // Оптимізуємо обчислення середнього балу
+      let averageQuizScore = 0
+      if (courseQuizzes.length > 0) {
+        let totalScore = 0
+        for (const quiz of courseQuizzes) {
+          totalScore += quiz.score / quiz.totalQuestions
+        }
+        averageQuizScore = (totalScore / courseQuizzes.length) * 100
+      }
+
+      // Оптимізуємо обчислення останнього доступу
+      let lastAccessed = 0
+      for (const lesson of courseLessons) {
+        if (lesson.completedAt) {
+          lastAccessed = Math.max(lastAccessed, lesson.completedAt.getTime())
+        }
+      }
+      for (const quiz of courseQuizzes) {
+        lastAccessed = Math.max(lastAccessed, quiz.completedAt.getTime())
+      }
+
+      return {
+        courseId,
+        totalLessons: courseLessons.length,
+        completedLessons,
+        totalQuizzes: courseQuizzes.length,
+        completedQuizzes,
+        averageQuizScore,
+        lastAccessed: new Date(lastAccessed)
+      }
     }
-
-    const completedLessons = courseLessons.filter(p => p.completed).length
-    const completedQuizzes = courseQuizzes.length
-    const averageQuizScore = courseQuizzes.length > 0 
-      ? courseQuizzes.reduce((sum, q) => sum + (q.score / q.totalQuestions), 0) / courseQuizzes.length * 100
-      : 0
-
-    const lastAccessed = Math.max(
-      ...courseLessons.map(p => p.completedAt?.getTime() || 0),
-      ...courseQuizzes.map(q => q.completedAt.getTime())
-    )
-
-    return {
-      courseId,
-      totalLessons: courseLessons.length,
-      completedLessons,
-      totalQuizzes: courseQuizzes.length,
-      completedQuizzes,
-      averageQuizScore,
-      lastAccessed: new Date(lastAccessed)
-    }
-  }
+  }, [lessonProgress, quizResults])
 
   const courseProgress = useMemo(() => {
-    const allCourseIds = new Set([
-      ...Object.values(lessonProgress).map(p => p.courseId),
-      ...quizResults.map(r => r.courseId)
-    ])
+    // Оптимізуємо збір courseIds
+    const courseIds = new Set<string>()
+    
+    // Використовуємо for...of замість map для кращої продуктивності
+    for (const progress of Object.values(lessonProgress)) {
+      courseIds.add(progress.courseId)
+    }
+    for (const result of quizResults) {
+      courseIds.add(result.courseId)
+    }
 
     const progress: Record<string, CourseProgress> = {}
-    allCourseIds.forEach(courseId => {
+    for (const courseId of courseIds) {
       const courseProg = getCourseProgress(courseId)
       if (courseProg) {
         progress[courseId] = courseProg
       }
-    })
+    }
 
     return progress
-  }, [lessonProgress, quizResults])
+  }, [lessonProgress, quizResults, getCourseProgress])
 
   const value = useMemo(() => ({
     lessonProgress,

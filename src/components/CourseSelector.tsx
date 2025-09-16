@@ -1,4 +1,3 @@
-import { Box, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { getCourses } from '../lib/contentful'
 
@@ -15,29 +14,27 @@ export function CourseSelector({ value, onChange, label = "Select Course" }: Cou
   })
 
   if (isLoading) {
-    return <Typography>Loading courses...</Typography>
+    return <div className="text-gray-600">Loading courses...</div>
   }
 
   return (
-    <FormControl fullWidth>
-      <InputLabel>{label}</InputLabel>
-      <Select
+    <div className="w-full">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <select
         value={value}
-        label={label}
         onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
       >
+        <option value="">Select a course</option>
         {courses.map((course) => (
-          <MenuItem key={course.id} value={course.id}>
-            <Box>
-              <Typography variant="body1">{course.fields.title}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                ID: {course.id}
-              </Typography>
-            </Box>
-          </MenuItem>
+          <option key={course.id} value={course.id}>
+            {course.fields.title}
+          </option>
         ))}
-      </Select>
-    </FormControl>
+      </select>
+    </div>
   )
 }
 

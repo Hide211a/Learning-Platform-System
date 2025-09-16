@@ -126,23 +126,12 @@ function App() {
     }
   })
 
-  // Динамічні популярні курси - тільки ті категорії, які мають курси
-  const popularCourses = [...technicalCourses, ...nonTechnicalCourses]
-    .filter(course => course.count > 0) // Тільки категорії з курсами
-    .sort((a, b) => b.count - a.count) // Сортуємо за кількістю курсів
-    .slice(0, 4) // Показуємо топ-4
-    .map(course => ({
-      name: course.name,
-      icon: course.icon,
-      image: course.name === 'Frontend' ? '🎨' : 
-             course.name === 'Backend' ? '⚙️' : 
-             course.name === 'JavaScript' ? '📜' : 
-             course.name === 'Database' ? '🗄️' : 
-             course.name === 'Security' ? '🔒' :
-             course.name === 'Cloud' ? '☁️' :
-             course.name === 'Mobile' ? '📱' : '📚',
-      count: course.count
-    }))
+  const popularCourses = [
+    { name: 'Frontend', icon: (() => { const { IconComponent } = getCategoryIconElement('Frontend'); return <IconComponent /> })(), image: '🎨' },
+    { name: 'Backend', icon: (() => { const { IconComponent } = getCategoryIconElement('Backend'); return <IconComponent /> })(), image: '⚙️' },
+    { name: 'JavaScript', icon: (() => { const { IconComponent } = getCategoryIconElement('JavaScript'); return <IconComponent /> })(), image: '📜' },
+    { name: 'Database', icon: (() => { const { IconComponent } = getCategoryIconElement('Database'); return <IconComponent /> })(), image: '🗄️' },
+  ]
 
   const navigationItems = [
     { label: 'Головна', path: '/', icon: '🏠' },
@@ -169,7 +158,7 @@ function App() {
             </Link>
 
             {/* Search Bar */}
-            <div className="hidden lg:flex flex-1 max-w-xs mx-4 search-container">
+            <div className="hidden lg:flex flex-1 max-w-md mx-8 search-container">
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +225,7 @@ function App() {
             </div>
 
             {/* Navigation - Center */}
-            <nav className="hidden lg:flex items-center space-x-8 mr-8">
+            <nav className="hidden lg:flex items-center space-x-8">
               {navigationItems.map((item) => (
                 item.hasDropdown ? (
                   <div key={item.path} className="relative">
@@ -337,29 +326,18 @@ function App() {
                             <div className="w-48 bg-gradient-to-br from-primary-50 to-secondary-50 p-4 rounded-lg">
                               <h3 className="text-lg font-semibold text-gray-900 mb-4">Популярні</h3>
                               <div className="space-y-2">
-            {popularCourses.length > 0 ? (
-                                popularCourses.map((course, index) => (
+            {popularCourses.map((course, index) => (
                                   <Link
-                                    key={index}
-                                    to="/catalog"
+                key={index}
+                to="/catalog"
                                     onClick={() => setCoursesMenuOpen(false)}
-                                    className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-soft transition-all"
+                                    className="flex items-center gap-2 p-2 bg-white rounded-lg hover:shadow-soft transition-all"
                                   >
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-lg">{course.image}</span>
-                                      {course.icon}
-                                      <span className="text-sm font-medium text-gray-700">{course.name}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                      {course.count}
-                                    </span>
+                                    <span className="text-lg">{course.image}</span>
+                    {course.icon}
+                                    <span className="text-sm font-medium text-gray-700">{course.name}</span>
                                   </Link>
-                                ))
-                              ) : (
-                                <div className="text-center py-4">
-                                  <p className="text-sm text-gray-500">Курси завантажуються...</p>
-                                </div>
-                              )}
+                                ))}
                               </div>
                             </div>
                           </div>
@@ -380,7 +358,7 @@ function App() {
             </nav>
 
             {/* Right Side - Utility Buttons */}
-            <div className="flex items-center space-x-4 ml-4">
+            <div className="flex items-center space-x-4">
               {/* User Menu / Auth Buttons */}
               <div className="flex items-center space-x-3">
           {user ? (
@@ -519,6 +497,7 @@ function App() {
             </div>
           </div>
         </div>
+      </header>
       </header>
 
       {/* Main Content */}

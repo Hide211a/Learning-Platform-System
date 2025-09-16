@@ -1,8 +1,7 @@
 import { Outlet, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from './features/auth/AuthContext'
-import { useQuery } from '@tanstack/react-query'
-import { getCourses } from './lib/contentful'
+import { Button } from './components/ui/Button'
 import { 
   getCategoryIconElement, 
   categoryGroups 
@@ -13,48 +12,6 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [coursesMenuOpen, setCoursesMenuOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
-  const [showSearchResults, setShowSearchResults] = useState(false)
-
-  // Отримуємо курси для пошуку
-  const { data: courses } = useQuery({ 
-    queryKey: ['courses'], 
-    queryFn: getCourses 
-  })
-
-  // Функція пошуку курсів
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    
-    if (!query.trim() || !courses) {
-      setSearchResults([])
-      setShowSearchResults(false)
-      return
-    }
-
-    const filtered = courses.filter(course => 
-      course.fields.title.toLowerCase().includes(query.toLowerCase()) ||
-      (course.fields.description && course.fields.description.toLowerCase().includes(query.toLowerCase())) ||
-      (course.fields.category && course.fields.category.toLowerCase().includes(query.toLowerCase()))
-    ).slice(0, 5) // Показуємо тільки перші 5 результатів
-
-    setSearchResults(filtered)
-    setShowSearchResults(true)
-  }
-
-  // Закрити результати пошуку при кліку поза ними
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element
-      if (!target.closest('.search-container')) {
-        setShowSearchResults(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // Функція для отримання імені користувача
   const getUserDisplayName = () => {
@@ -72,77 +29,31 @@ function App() {
     return 'Користувач'
   }
 
-  // Динамічні категорії з Contentful
-  const getDynamicCategories = () => {
-    if (!courses) return { technical: [], nonTechnical: [] }
-    
-    // Отримуємо унікальні категорії з курсів
-    const uniqueCategories = [...new Set(courses.map(course => course.fields.category).filter(Boolean))]
-    
-    // Логування для діагностики
-    console.log('Courses from Contentful:', courses)
-    console.log('Unique categories found:', uniqueCategories)
-    
-    // Якщо немає категорій в курсах, показуємо всі доступні
-    if (uniqueCategories.length === 0) {
-      console.log('No categories found, showing all available')
-      return { 
-        technical: categoryGroups.technical, 
-        nonTechnical: categoryGroups.nonTechnical 
-      }
-    }
-    
-    const technical = uniqueCategories.filter(cat => cat && categoryGroups.technical.includes(cat))
-    const nonTechnical = uniqueCategories.filter(cat => cat && categoryGroups.nonTechnical.includes(cat))
-    
-    console.log('Technical categories:', technical)
-    console.log('Non-technical categories:', nonTechnical)
-    
-    return { technical, nonTechnical }
-  }
-
-  const { technical: dynamicTechnical, nonTechnical: dynamicNonTechnical } = getDynamicCategories()
-
   // Дані для dropdown меню курсів
-  const technicalCourses = dynamicTechnical.map(category => {
-    const { IconComponent } = getCategoryIconElement(category!)
-    const courseCount = courses?.filter(c => c.fields.category === category).length || 0
+  const technicalCourses = categoryGroups.technical.map(category => {
+    const { IconComponent } = getCategoryIconElement(category)
     return {
       name: category,
-      icon: <IconComponent />,
-      level: category === 'Security' || category === 'Cloud' ? 'ПРОСУНУТИЙ' : '',
-      count: courseCount
+      icon: <IconComponent className="w-4 h-4" />,
+      level: category === 'Security' || category === 'Cloud' ? 'ПРОСУНУТИЙ' : ''
     }
   })
 
-  const nonTechnicalCourses = dynamicNonTechnical.map(category => {
-    const { IconComponent } = getCategoryIconElement(category!)
-    const courseCount = courses?.filter(c => c.fields.category === category).length || 0
+  const nonTechnicalCourses = categoryGroups.nonTechnical.map(category => {
+    const { IconComponent } = getCategoryIconElement(category)
     return {
       name: category,
-      icon: <IconComponent />,
-      level: category === 'Other' ? 'новий' : '',
-      count: courseCount
+      icon: <IconComponent className="w-4 h-4" />,
+      level: category === 'Other' ? 'новий' : ''
     }
   })
 
-  // Динамічні популярні курси - тільки ті категорії, які мають курси
-  const popularCourses = [...technicalCourses, ...nonTechnicalCourses]
-    .filter(course => course.count > 0) // Тільки категорії з курсами
-    .sort((a, b) => b.count - a.count) // Сортуємо за кількістю курсів
-    .slice(0, 4) // Показуємо топ-4
-    .map(course => ({
-      name: course.name,
-      icon: course.icon,
-      image: course.name === 'Frontend' ? '🎨' : 
-             course.name === 'Backend' ? '⚙️' : 
-             course.name === 'JavaScript' ? '📜' : 
-             course.name === 'Database' ? '🗄️' : 
-             course.name === 'Security' ? '🔒' :
-             course.name === 'Cloud' ? '☁️' :
-             course.name === 'Mobile' ? '📱' : '📚',
-      count: course.count
-    }))
+  const popularCourses = [
+    { name: 'Frontend', icon: (() => { const { IconComponent } = getCategoryIconElement('Frontend'); return <IconComponent className="w-4 h-4" /> })(), image: '🎨' },
+    { name: 'Backend', icon: (() => { const { IconComponent } = getCategoryIconElement('Backend'); return <IconComponent className="w-4 h-4" /> })(), image: '⚙️' },
+    { name: 'JavaScript', icon: (() => { const { IconComponent } = getCategoryIconElement('JavaScript'); return <IconComponent className="w-4 h-4" /> })(), image: '📜' },
+    { name: 'Database', icon: (() => { const { IconComponent } = getCategoryIconElement('Database'); return <IconComponent className="w-4 h-4" /> })(), image: '🗄️' },
+  ]
 
   const navigationItems = [
     { label: 'Головна', path: '/', icon: '🏠' },
@@ -168,75 +79,8 @@ function App() {
               </div>
             </Link>
 
-            {/* Search Bar */}
-            <div className="hidden lg:flex flex-1 max-w-xs mx-4 search-container">
-              <div className="relative w-full">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Пошук курсів..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  onFocus={() => searchQuery && setShowSearchResults(true)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-full leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-                
-                {/* Search Results Dropdown */}
-                {showSearchResults && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
-                    <div className="p-2">
-                      {searchResults.map((course) => (
-                        <Link
-                          key={course.id}
-                          to={`/courses/${course.id}`}
-                          onClick={() => {
-                            setShowSearchResults(false)
-                            setSearchQuery('')
-                          }}
-                          className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-                        >
-                          <div className="w-12 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                            <span className="text-xs font-bold text-gray-600">📚</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {course.fields.title}
-                            </p>
-                            {course.fields.description && (
-                              <p className="text-xs text-gray-500 truncate">
-                                {course.fields.description}
-                              </p>
-                            )}
-                          </div>
-                          {course.fields.level && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                              {course.fields.level}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* No Results */}
-                {showSearchResults && searchQuery && searchResults.length === 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
-                    <div className="p-4 text-center">
-                      <p className="text-sm text-gray-500">Курси не знайдено</p>
-                      <p className="text-xs text-gray-400 mt-1">Спробуйте інші ключові слова</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Navigation - Center */}
-            <nav className="hidden lg:flex items-center space-x-8 mr-8">
+            <nav className="hidden lg:flex items-center space-x-8">
               {navigationItems.map((item) => (
                 item.hasDropdown ? (
                   <div key={item.path} className="relative">
@@ -252,11 +96,11 @@ function App() {
                     
                     {/* Courses Dropdown */}
                     {coursesMenuOpen && (
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-[32rem] bg-white rounded-xl shadow-large border border-gray-200 overflow-hidden z-50 lg:block hidden">
+                      <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-large border border-gray-200 overflow-hidden z-50">
                         <div className="p-6">
                           <div className="flex gap-4">
                             {/* Left side - All courses */}
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1">
                               <h3 className="text-lg font-semibold text-gray-900 mb-4">Всі курси</h3>
                               
                               <div className="flex gap-2 mb-4">
@@ -277,28 +121,21 @@ function App() {
                   key={index}
                   to="/catalog"
                                       onClick={() => setCoursesMenuOpen(false)}
-                                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    {course.icon}
-                    <span className="text-sm text-gray-700">{course.name}</span>
-                    {course.level && (
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        course.level === 'новий' 
-                          ? 'bg-success-100 text-success-800' 
-                          : 'bg-warning-100 text-warning-800'
-                      }`}>
-                        {course.level}
-                      </span>
-                    )}
-                  </div>
-                  {course.count > 0 && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                      {course.count}
-                    </span>
-                  )}
-                </Link>
-              ))}
+                  {course.icon}
+                                      <span className="text-sm text-gray-700 flex-1">{course.name}</span>
+                  {course.level && (
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                          course.level === 'новий' 
+                                            ? 'bg-success-100 text-success-800' 
+                                            : 'bg-warning-100 text-warning-800'
+                                        }`}>
+                                          {course.level}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  ))}
                                 </div>
                               </div>
 
@@ -311,24 +148,17 @@ function App() {
                   key={index}
                   to="/catalog"
                                       onClick={() => setCoursesMenuOpen(false)}
-                                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    {course.icon}
-                    <span className="text-sm text-gray-700">{course.name}</span>
-                    {course.level && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-100 text-success-800">
-                        {course.level}
-                      </span>
-                    )}
-                  </div>
-                  {course.count > 0 && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                      {course.count}
-                    </span>
-                  )}
-                </Link>
-              ))}
+                  {course.icon}
+                                      <span className="text-sm text-gray-700 flex-1">{course.name}</span>
+                  {course.level && (
+                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-100 text-success-800">
+                                          {course.level}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  ))}
                                 </div>
                               </div>
                             </div>
@@ -337,29 +167,18 @@ function App() {
                             <div className="w-48 bg-gradient-to-br from-primary-50 to-secondary-50 p-4 rounded-lg">
                               <h3 className="text-lg font-semibold text-gray-900 mb-4">Популярні</h3>
                               <div className="space-y-2">
-            {popularCourses.length > 0 ? (
-                                popularCourses.map((course, index) => (
+            {popularCourses.map((course, index) => (
                                   <Link
-                                    key={index}
-                                    to="/catalog"
+                key={index}
+                to="/catalog"
                                     onClick={() => setCoursesMenuOpen(false)}
-                                    className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-soft transition-all"
+                                    className="flex items-center gap-2 p-2 bg-white rounded-lg hover:shadow-soft transition-all"
                                   >
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-lg">{course.image}</span>
-                                      {course.icon}
-                                      <span className="text-sm font-medium text-gray-700">{course.name}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                      {course.count}
-                                    </span>
+                                    <span className="text-lg">{course.image}</span>
+                    {course.icon}
+                                    <span className="text-sm font-medium text-gray-700">{course.name}</span>
                                   </Link>
-                                ))
-                              ) : (
-                                <div className="text-center py-4">
-                                  <p className="text-sm text-gray-500">Курси завантажуються...</p>
-                                </div>
-                              )}
+                                ))}
                               </div>
                             </div>
                           </div>
@@ -369,8 +188,8 @@ function App() {
                   </div>
                 ) : (
                   <Link
-                      key={item.path}
-                      to={item.path}
+                    key={item.path}
+                    to={item.path}
                     className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
                   >
                     {item.label}
@@ -380,7 +199,22 @@ function App() {
             </nav>
 
             {/* Right Side - Utility Buttons */}
-            <div className="flex items-center space-x-4 ml-4">
+            <div className="flex items-center space-x-4">
+              {/* Phone Icon */}
+              <button className="hidden md:flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 transition-colors duration-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </button>
+
+              {/* Language Selector */}
+              <div className="hidden md:flex items-center space-x-1 cursor-pointer hover:bg-gray-100 rounded-lg px-2 py-1 transition-colors duration-200">
+                <div className="w-6 h-4 bg-gradient-to-b from-blue-500 to-yellow-400 rounded-sm"></div>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+
               {/* User Menu / Auth Buttons */}
               <div className="flex items-center space-x-3">
           {user ? (
@@ -443,10 +277,8 @@ function App() {
                   </Link>
                 </div>
               )}
-              </div>
-            </div>
 
-            {/* Mobile Menu Button */}
+              {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-2 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
@@ -455,12 +287,14 @@ function App() {
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   )}
                 </svg>
               </button>
             </div>
           </div>
+        </div>
+
         {/* Mobile Menu - Animated */}
         <div className={`md:hidden overflow-hidden transition-all duration-300 ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="border-t border-gray-200 bg-white/95 backdrop-blur-sm">
