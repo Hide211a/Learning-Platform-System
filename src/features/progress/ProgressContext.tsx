@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../auth/AuthContext'
+// import { addComment as addCommentToFirestore, subscribeToComments } from '../../firebase'
+// import type { FirestoreComment } from '../../firebase'
+import { userDataManager, type UserData } from '../../lib/userDataManager'
 
 export type LessonProgress = {
   courseId: string
@@ -14,8 +17,23 @@ export type QuizResult = {
   quizId: string
   score: number
   totalQuestions: number
-  completedAt: Date
   answers: Record<string, string | string[]>
+  completedAt: Date
+}
+
+export type CourseRating = {
+  courseId: string
+  rating: number
+  ratedAt: Date
+}
+
+export type Comment = {
+  id: string
+  courseId: string
+  author: string
+  content: string
+  createdAt: Date
+  userId: string
 }
 
 export type CourseProgress = {
@@ -26,6 +44,15 @@ export type CourseProgress = {
   completedQuizzes: number
   averageQuizScore: number
   lastAccessed: Date
+  isCompleted: boolean
+  completedAt?: Date
+}
+
+export type UserStreak = {
+  currentStreak: number
+  longestStreak: number
+  lastLearningDate: Date | null
+  streakStartDate: Date | null
 }
 
 type ProgressContextValue = {
@@ -38,122 +65,68 @@ type ProgressContextValue = {
   removeQuizResult: (courseId: string, quizId: string) => void
   getLessonProgress: (courseId: string, lessonId: string) => LessonProgress | null
   getCourseProgress: (courseId: string) => CourseProgress | null
+  getCourseProgressPercentage: (courseId: string) => number
+  savedCourses: string[]
+  toggleSavedCourse: (courseId: string) => void
+  isCourseSaved: (courseId: string) => boolean
+  getCompletedStudentsCount: (courseId: string, totalLessons?: number, totalQuizzes?: number) => number
+  getCourseRating: (courseId: string) => number
+  rateCourse: (courseId: string, rating: number) => void
+  addComment: (courseId: string, content: string, author: string) => Promise<void>
+  getCommentsByCourseId: (courseId: string) => Comment[]
+  subscribeToCourseComments: (courseId: string) => () => void
+  comments: Comment[]
   isLoading: boolean
+  totalLessonsCompleted: number
+  totalQuizzesCompleted: number
+  userStreak: UserStreak
+  updateStreak: () => void
+  clearAllUserData: () => void
 }
 
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined)
 
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const [lessonProgress, setLessonProgress] = useState<Record<string, LessonProgress>>({})
-  const [quizResults, setQuizResults] = useState<QuizResult[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
-  // Load progress from localStorage on mount
+  // Ініціалізація користувача
   useEffect(() => {
     if (!user) {
-      setLessonProgress({})
-      setQuizResults([])
+      console.log('❌ Користувач не авторизований')
+      setUserData(null)
       setIsLoading(false)
       return
     }
 
-    // Використовуємо requestIdleCallback для неблокуючого завантаження
-    const loadProgress = () => {
-      try {
-        const savedProgress = localStorage.getItem(`progress_${user.uid}`)
-        const savedQuizResults = localStorage.getItem(`quizResults_${user.uid}`)
-        
-        if (savedProgress) {
-          const parsed = JSON.parse(savedProgress)
-          // Оптимізуємо конвертацію дат
-          const progressEntries = Object.entries(parsed)
-          for (const [key, value] of progressEntries) {
-            if ((value as any).completedAt) {
-              (value as any).completedAt = new Date((value as any).completedAt)
-            }
-          }
-          setLessonProgress(parsed)
-        }
-        
-        if (savedQuizResults) {
-          const parsed = JSON.parse(savedQuizResults)
-          // Оптимізуємо конвертацію дат для quiz results
-          const results = []
-          for (const result of parsed) {
-            results.push({
-              ...result,
-              completedAt: new Date(result.completedAt)
-            })
-          }
-          setQuizResults(results)
-        }
-      } catch (error) {
-        console.error('Error loading progress:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    // Використовуємо requestIdleCallback якщо доступний, інакше setTimeout
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadProgress)
-    } else {
-      setTimeout(loadProgress, 0)
-    }
+    console.log('🔄 Ініціалізація даних для користувача:', user.email)
+    
+    // Встановлюємо користувача в менеджері
+    userDataManager.setCurrentUser(user.uid, user.email || '')
+    
+    // Отримуємо дані користувача
+    const data = userDataManager.getCurrentUserData()
+    setUserData(data)
+    setIsLoading(false)
+    
+    console.log('✅ Дані користувача ініціалізовано:', user.email)
   }, [user])
 
-  // Debounced save to localStorage to prevent excessive writes
+  // Оновлення даних при зміні userData
   useEffect(() => {
-    if (!user || isLoading) return
-    
-    const timeoutId = setTimeout(() => {
-      // Використовуємо requestIdleCallback для неблокуючого збереження
-      const saveProgress = () => {
-        try {
-          localStorage.setItem(`progress_${user.uid}`, JSON.stringify(lessonProgress))
-        } catch (error) {
-          console.error('Error saving progress:', error)
-        }
-      }
+    if (userData) {
+      console.log('📊 Оновлення даних користувача:', userData.email)
+    }
+  }, [userData])
 
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(saveProgress)
-      } else {
-        setTimeout(saveProgress, 0)
-      }
-    }, 300) // Debounce by 300ms
-
-    return () => clearTimeout(timeoutId)
-  }, [lessonProgress, user, isLoading])
-
-  useEffect(() => {
-    if (!user || isLoading) return
-    
-    const timeoutId = setTimeout(() => {
-      // Використовуємо requestIdleCallback для неблокуючого збереження
-      const saveQuizResults = () => {
-        try {
-          localStorage.setItem(`quizResults_${user.uid}`, JSON.stringify(quizResults))
-        } catch (error) {
-          console.error('Error saving quiz results:', error)
-        }
-      }
-
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(saveQuizResults)
-      } else {
-        setTimeout(saveQuizResults, 0)
-      }
-    }, 300) // Debounce by 300ms
-
-    return () => clearTimeout(timeoutId)
-  }, [quizResults, user, isLoading])
-
+  // Функції для роботи з уроками
   const markLessonComplete = (courseId: string, lessonId: string, timeSpent: number = 0) => {
+    if (!userData) return
+
     const key = `${courseId}_${lessonId}`
-    setLessonProgress(prev => ({
-      ...prev,
+    const newProgress = {
+      ...userData.lessonProgress,
       [key]: {
         courseId,
         lessonId,
@@ -161,130 +134,311 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
         completedAt: new Date(),
         timeSpent
       }
-    }))
+    }
+
+    userDataManager.updateCurrentUserData({ lessonProgress: newProgress })
+    setUserData(prev => prev ? { ...prev, lessonProgress: newProgress } : null)
+    
+    // Оновлюємо streak
+    updateStreak()
   }
 
   const unmarkLessonComplete = (courseId: string, lessonId: string) => {
+    if (!userData) return
+
     const key = `${courseId}_${lessonId}`
-    setLessonProgress(prev => {
-      const newProgress = { ...prev }
-      delete newProgress[key]
-      return newProgress
-    })
+    const newProgress = { ...userData.lessonProgress }
+    delete newProgress[key]
+
+    userDataManager.updateCurrentUserData({ lessonProgress: newProgress })
+    setUserData(prev => prev ? { ...prev, lessonProgress: newProgress } : null)
   }
 
+  // Функції для роботи з квізами
   const saveQuizResult = (courseId: string, quizId: string, score: number, totalQuestions: number, answers: Record<string, string | string[]>) => {
-    const result: QuizResult = {
+    if (!userData) return
+
+    const newResult: QuizResult = {
       courseId,
       quizId,
       score,
       totalQuestions,
-      completedAt: new Date(),
-      answers
+      answers,
+      completedAt: new Date()
     }
+
+    const newResults = [...userData.quizResults.filter(r => !(r.courseId === courseId && r.quizId === quizId)), newResult]
+
+    userDataManager.updateCurrentUserData({ quizResults: newResults })
+    setUserData(prev => prev ? { ...prev, quizResults: newResults } : null)
     
-    setQuizResults(prev => {
-      // Remove any existing result for this quiz
-      const filtered = prev.filter(r => !(r.courseId === courseId && r.quizId === quizId))
-      return [...filtered, result]
-    })
+    // Оновлюємо streak
+    updateStreak()
   }
 
   const removeQuizResult = (courseId: string, quizId: string) => {
-    setQuizResults(prev => prev.filter(r => !(r.courseId === courseId && r.quizId === quizId)))
+    if (!userData) return
+
+    const newResults = userData.quizResults.filter(r => !(r.courseId === courseId && r.quizId === quizId))
+
+    userDataManager.updateCurrentUserData({ quizResults: newResults })
+    setUserData(prev => prev ? { ...prev, quizResults: newResults } : null)
   }
 
+  // Функції для роботи з рейтингами
+  const rateCourse = (courseId: string, rating: number) => {
+    if (!userData) return
+
+    const newRating: CourseRating = {
+      courseId,
+      rating,
+      ratedAt: new Date()
+    }
+
+    const newRatings = [...userData.courseRatings.filter(r => r.courseId !== courseId), newRating]
+
+    userDataManager.updateCurrentUserData({ courseRatings: newRatings })
+    setUserData(prev => prev ? { ...prev, courseRatings: newRatings } : null)
+  }
+
+  // Функції для роботи з збереженими курсами
+  const toggleSavedCourse = (courseId: string) => {
+    if (!userData) return
+
+    const isSaved = userData.savedCourses.includes(courseId)
+    const newSavedCourses = isSaved 
+      ? userData.savedCourses.filter(id => id !== courseId)
+      : [...userData.savedCourses, courseId]
+
+    userDataManager.updateCurrentUserData({ savedCourses: newSavedCourses })
+    setUserData(prev => prev ? { ...prev, savedCourses: newSavedCourses } : null)
+  }
+
+  // Функції для роботи зі streak
+  const updateStreak = () => {
+    if (!userData) return
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const lastLearningDate = userData.userStreak.lastLearningDate
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    let newStreak = userData.userStreak.currentStreak
+    let newStreakStartDate = userData.userStreak.streakStartDate
+
+    if (!lastLearningDate) {
+      // Перший день навчання
+      newStreak = 1
+      newStreakStartDate = today
+    } else {
+      const lastDate = new Date(lastLearningDate)
+      lastDate.setHours(0, 0, 0, 0)
+
+      if (lastDate.getTime() === today.getTime()) {
+        // Вже навчалися сьогодні - streak не змінюється
+        return
+      } else if (lastDate.getTime() === yesterday.getTime()) {
+        // Навчалися вчора - продовжуємо streak
+        newStreak = userData.userStreak.currentStreak + 1
+        if (userData.userStreak.currentStreak === 0) {
+          newStreakStartDate = today
+        }
+      } else {
+        // Пропустили дні - streak скидається
+        newStreak = 1
+        newStreakStartDate = today
+      }
+    }
+
+    const newLongestStreak = Math.max(userData.userStreak.longestStreak, newStreak)
+
+    const newStreakData = {
+      currentStreak: newStreak,
+      longestStreak: newLongestStreak,
+      lastLearningDate: today,
+      streakStartDate: newStreakStartDate
+    }
+
+    userDataManager.updateCurrentUserData({ userStreak: newStreakData })
+    setUserData(prev => prev ? { ...prev, userStreak: newStreakData } : null)
+  }
+
+  // Функція для очищення всіх даних
+  const clearAllUserData = () => {
+    if (!user) return
+
+    userDataManager.clearUserData(user.uid)
+    const newData = userDataManager.getCurrentUserData()
+    setUserData(newData)
+  }
+
+  // Обчислені значення
+  const totalLessonsCompleted = useMemo(() => {
+    if (!userData) return 0
+    return Object.values(userData.lessonProgress).filter(p => p.completed).length
+  }, [userData])
+
+  const totalQuizzesCompleted = useMemo(() => {
+    if (!userData) return 0
+    return userData.quizResults.length
+  }, [userData])
+
+  const savedCourses = useMemo(() => {
+    if (!userData) return []
+    return userData.savedCourses
+  }, [userData])
+
+  const userStreak = useMemo(() => {
+    if (!userData) return {
+      currentStreak: 0,
+      longestStreak: 0,
+      lastLearningDate: null,
+      streakStartDate: null
+    }
+    return userData.userStreak
+  }, [userData])
+
+  // Функції для отримання прогресу
   const getLessonProgress = (courseId: string, lessonId: string): LessonProgress | null => {
+    if (!userData) return null
     const key = `${courseId}_${lessonId}`
-    return lessonProgress[key] || null
+    return userData.lessonProgress[key] || null
   }
 
-  const getCourseProgress = useMemo(() => {
-    return (courseId: string): CourseProgress | null => {
-      const courseLessons = Object.values(lessonProgress).filter(p => p.courseId === courseId)
-      const courseQuizzes = quizResults.filter(r => r.courseId === courseId)
-      
-      if (courseLessons.length === 0 && courseQuizzes.length === 0) {
-        return null
-      }
+  const getCourseProgress = (courseId: string): CourseProgress | null => {
+    if (!userData) return null
 
-      const completedLessons = courseLessons.filter(p => p.completed).length
-      const completedQuizzes = courseQuizzes.length
-      
-      // Оптимізуємо обчислення середнього балу
-      let averageQuizScore = 0
-      if (courseQuizzes.length > 0) {
-        let totalScore = 0
-        for (const quiz of courseQuizzes) {
-          totalScore += quiz.score / quiz.totalQuestions
-        }
-        averageQuizScore = (totalScore / courseQuizzes.length) * 100
-      }
+    const courseLessons = Object.values(userData.lessonProgress).filter(p => p.courseId === courseId)
+    const courseQuizzes = userData.quizResults.filter(r => r.courseId === courseId)
 
-      // Оптимізуємо обчислення останнього доступу
-      let lastAccessed = 0
-      for (const lesson of courseLessons) {
-        if (lesson.completedAt) {
-          lastAccessed = Math.max(lastAccessed, lesson.completedAt.getTime())
-        }
-      }
+    if (courseLessons.length === 0 && courseQuizzes.length === 0) {
+      return null
+    }
+
+    const completedLessons = courseLessons.filter(p => p.completed).length
+    const completedQuizzes = courseQuizzes.length
+
+    let averageQuizScore = 0
+    if (courseQuizzes.length > 0) {
+      let totalScore = 0
       for (const quiz of courseQuizzes) {
-        lastAccessed = Math.max(lastAccessed, quiz.completedAt.getTime())
+        totalScore += quiz.score / quiz.totalQuestions
       }
+      averageQuizScore = (totalScore / courseQuizzes.length) * 100
+    }
 
-      return {
-        courseId,
-        totalLessons: courseLessons.length,
-        completedLessons,
-        totalQuizzes: courseQuizzes.length,
-        completedQuizzes,
-        averageQuizScore,
-        lastAccessed: new Date(lastAccessed)
+    let lastAccessed = 0
+    for (const lesson of courseLessons) {
+      if (lesson.completedAt) {
+        const date = lesson.completedAt instanceof Date ? lesson.completedAt : new Date(lesson.completedAt)
+        lastAccessed = Math.max(lastAccessed, date.getTime())
       }
     }
-  }, [lessonProgress, quizResults])
-
-  const courseProgress = useMemo(() => {
-    // Оптимізуємо збір courseIds
-    const courseIds = new Set<string>()
-    
-    // Використовуємо for...of замість map для кращої продуктивності
-    for (const progress of Object.values(lessonProgress)) {
-      courseIds.add(progress.courseId)
-    }
-    for (const result of quizResults) {
-      courseIds.add(result.courseId)
-    }
-
-    const progress: Record<string, CourseProgress> = {}
-    for (const courseId of courseIds) {
-      const courseProg = getCourseProgress(courseId)
-      if (courseProg) {
-        progress[courseId] = courseProg
+    for (const quiz of courseQuizzes) {
+      if (quiz.completedAt) {
+        const date = quiz.completedAt instanceof Date ? quiz.completedAt : new Date(quiz.completedAt)
+        lastAccessed = Math.max(lastAccessed, date.getTime())
       }
     }
 
-    return progress
-  }, [lessonProgress, quizResults, getCourseProgress])
+    const isCompleted = completedLessons === courseLessons.length && 
+                       completedQuizzes === courseQuizzes.length &&
+                       courseLessons.length > 0
+
+    return {
+      courseId,
+      totalLessons: courseLessons.length,
+      completedLessons,
+      totalQuizzes: courseQuizzes.length,
+      completedQuizzes,
+      averageQuizScore,
+      lastAccessed: new Date(lastAccessed),
+      isCompleted,
+      completedAt: isCompleted ? new Date(lastAccessed) : undefined
+    }
+  }
+
+  const getCourseProgressPercentage = (courseId: string): number => {
+    const progress = getCourseProgress(courseId)
+    if (!progress) return 0
+
+    const totalItems = progress.totalLessons + progress.totalQuizzes
+    if (totalItems === 0) return 0
+
+    const completedItems = progress.completedLessons + progress.completedQuizzes
+    return Math.round((completedItems / totalItems) * 100)
+  }
+
+  const isCourseSaved = (courseId: string): boolean => {
+    if (!userData) return false
+    return userData.savedCourses.includes(courseId)
+  }
+
+  const getCourseRating = (courseId: string): number => {
+    if (!userData) return 0
+    const rating = userData.courseRatings.find(r => r.courseId === courseId)
+    return rating ? rating.rating : 0
+  }
+
+  // Заглушки для коментарів (поки що не реалізовано)
+  const [comments] = useState<Comment[]>([])
+
+  const addComment = async (_courseId: string, _content: string, _author: string): Promise<void> => {
+    // TODO: Реалізувати коментарі
+  }
+
+  const getCommentsByCourseId = (_courseId: string): Comment[] => {
+    return comments.filter(c => c.courseId === _courseId)
+  }
+
+  const subscribeToCourseComments = (_courseId: string): (() => void) => {
+    // TODO: Реалізувати підписку на коментарі
+    return () => {}
+  }
+
+  const getCompletedStudentsCount = (_courseId: string, _totalLessons?: number, _totalQuizzes?: number): number => {
+    // TODO: Реалізувати підрахунок студентів
+    return 0
+  }
 
   const value = useMemo(() => ({
-    lessonProgress,
-    quizResults,
-    courseProgress,
+    lessonProgress: userData?.lessonProgress || {},
+    quizResults: userData?.quizResults || [],
+    courseProgress: {}, // Буде обчислюватися динамічно
     markLessonComplete,
     unmarkLessonComplete,
     saveQuizResult,
     removeQuizResult,
     getLessonProgress,
     getCourseProgress,
-    isLoading
-  }), [lessonProgress, quizResults, courseProgress, isLoading])
+    getCourseProgressPercentage,
+    savedCourses,
+    toggleSavedCourse,
+    isCourseSaved,
+    getCompletedStudentsCount,
+    getCourseRating,
+    rateCourse,
+    addComment,
+    getCommentsByCourseId,
+    subscribeToCourseComments,
+    comments,
+    isLoading,
+    totalLessonsCompleted,
+    totalQuizzesCompleted,
+    userStreak,
+    updateStreak,
+    clearAllUserData
+  }), [userData, isLoading, totalLessonsCompleted, totalQuizzesCompleted, savedCourses, userStreak, comments])
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>
 }
 
 export function useProgress() {
   const ctx = useContext(ProgressContext)
-  if (!ctx) throw new Error('useProgress must be used within ProgressProvider')
+  if (ctx === undefined) {
+    throw new Error('useProgress must be used within a ProgressProvider')
+  }
   return ctx
 }

@@ -21,6 +21,7 @@ const About = lazy(() => import('./pages/About.tsx'))
 const Contact = lazy(() => import('./pages/Contact.tsx'))
 
 import ProtectedRoute from './features/auth/ProtectedRoute'
+import { AdminRoute } from './components/AdminRoute'
 
 const router = createBrowserRouter([
   {
@@ -35,11 +36,11 @@ const router = createBrowserRouter([
       { path: 'courses/:courseId', element: <Course /> },
       { path: 'courses/:courseId/video', element: <CourseVideo /> },
       { path: 'courses/:courseId/lessons/:lessonId', element: <Lesson /> },
-      { path: 'courses/:courseId/quiz/:quizId', element: <Quiz /> },
+      { path: 'courses/:courseId/quizzes/:quizId', element: <Quiz /> },
       { element: <ProtectedRoute />, children: [
         { path: 'profile', element: <Profile /> },
-        { path: 'admin', element: <Admin /> },
       ]},
+      { path: 'admin', element: <AdminRoute><Admin /></AdminRoute> },
       { path: 'auth', element: <Auth /> },
     ],
   },

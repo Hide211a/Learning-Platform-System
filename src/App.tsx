@@ -1,4 +1,4 @@
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from './features/auth/AuthContext'
 import { useQuery } from '@tanstack/react-query'
@@ -7,21 +7,33 @@ import {
   getCategoryIconElement, 
   categoryGroups 
 } from "./lib/courseCategories"
+import { ScrollToTop } from './components/ScrollToTop'
 
 function App() {
-  const { user, logout } = useAuth()
+  const { user, userRole, roleLoading, logout } = useAuth()
+  const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [coursesMenuOpen, setCoursesMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [currentPath, setCurrentPath] = useState(location.pathname)
 
   // Отримуємо курси для пошуку
   const { data: courses } = useQuery({ 
     queryKey: ['courses'], 
     queryFn: getCourses 
   })
+
+  // Відстежуємо зміни маршруту
+  useEffect(() => {
+    setCurrentPath(location.pathname)
+    // Закриваємо меню при зміні маршруту
+    setMobileMenuOpen(false)
+    setUserMenuOpen(false)
+    setCoursesMenuOpen(false)
+  }, [location.pathname])
 
   // Функція пошуку курсів
   const handleSearch = (query: string) => {
@@ -60,16 +72,40 @@ function App() {
   const getUserDisplayName = () => {
     if (!user) return ''
     
+    // Спочатку перевіряємо збережене ім'я в профілі (прив'язано до користувача)
+    try {
+      const userId = user.uid
+      const savedProfile = localStorage.getItem(`userProfile_${userId}`)
+      if (savedProfile) {
+        const parsedProfile = JSON.parse(savedProfile)
+        if (parsedProfile.displayName && parsedProfile.displayName.trim()) {
+          return parsedProfile.displayName
+        }
+      }
+    } catch (error) {
+      console.error('Помилка читання профілю:', error)
+    }
+    
+    // Якщо немає збереженого імені, використовуємо displayName з Firebase
     if (user.displayName) {
       return user.displayName
     }
     
+    // В останню чергу використовуємо частину email
     if (user.email) {
       const emailName = user.email.split('@')[0]
       return emailName.charAt(0).toUpperCase() + emailName.slice(1)
     }
     
     return 'Користувач'
+  }
+
+  // Функція для визначення активної вкладки
+  const isActiveTab = (path: string) => {
+    if (path === '/') {
+      return currentPath === '/'
+    }
+    return currentPath.startsWith(path)
   }
 
   // Динамічні категорії з Contentful
@@ -79,13 +115,9 @@ function App() {
     // Отримуємо унікальні категорії з курсів
     const uniqueCategories = [...new Set(courses.map(course => course.fields.category).filter(Boolean))]
     
-    // Логування для діагностики
-    console.log('Courses from Contentful:', courses)
-    console.log('Unique categories found:', uniqueCategories)
     
     // Якщо немає категорій в курсах, показуємо всі доступні
     if (uniqueCategories.length === 0) {
-      console.log('No categories found, showing all available')
       return { 
         technical: categoryGroups.technical, 
         nonTechnical: categoryGroups.nonTechnical 
@@ -94,9 +126,6 @@ function App() {
     
     const technical = uniqueCategories.filter(cat => cat && categoryGroups.technical.includes(cat))
     const nonTechnical = uniqueCategories.filter(cat => cat && categoryGroups.nonTechnical.includes(cat))
-    
-    console.log('Technical categories:', technical)
-    console.log('Non-technical categories:', nonTechnical)
     
     return { technical, nonTechnical }
   }
@@ -144,15 +173,22 @@ function App() {
       count: course.count
     }))
 
+  // Визначаємо, чи показувати адмін панель
+  const shouldShowAdmin = userRole === 'admin' || (roleLoading && user?.email === 'siidechaiin@gmail.com')
+
   const navigationItems = [
     { label: 'Головна', path: '/', icon: '🏠' },
     { label: 'Курси', path: '/catalog', icon: '📚', hasDropdown: true },
     { label: 'Про нас', path: '/about', icon: 'ℹ️' },
     { label: 'Контакти', path: '/contact', icon: '📞' },
+    // Додаємо адмін панель для адмінів або під час завантаження для вашого email
+    ...(shouldShowAdmin ? [{ label: 'Адмін', path: '/admin', icon: '⚙️' }] : [])
   ]
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <ScrollToTop />
       {/* Header - Mate Academy Style */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -242,7 +278,11 @@ function App() {
                   <div key={item.path} className="relative">
                     <button
                       onClick={() => setCoursesMenuOpen(!coursesMenuOpen)}
-                      className="flex items-center space-x-1 px-3 py-2 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200"
+                      className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                        isActiveTab(item.path) 
+                          ? 'text-red-600 bg-red-50 hover:bg-red-100' 
+                          : 'text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200'
+                      }`}
                     >
                       <span className="font-medium">{item.label}</span>
                       <svg className={`w-4 h-4 transition-transform duration-200 ${coursesMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,25 +320,25 @@ function App() {
                                       className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    {course.icon}
+                  {course.icon}
                     <span className="text-sm text-gray-700">{course.name}</span>
-                    {course.level && (
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        course.level === 'новий' 
-                          ? 'bg-success-100 text-success-800' 
-                          : 'bg-warning-100 text-warning-800'
-                      }`}>
-                        {course.level}
+                  {course.level && (
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                          course.level === 'новий' 
+                                            ? 'bg-success-100 text-success-800' 
+                                            : 'bg-warning-100 text-warning-800'
+                                        }`}>
+                                          {course.level}
                       </span>
                     )}
                   </div>
                   {course.count > 0 && (
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                       {course.count}
-                    </span>
-                  )}
-                </Link>
-              ))}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  ))}
                                 </div>
                               </div>
 
@@ -314,21 +354,21 @@ function App() {
                                       className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    {course.icon}
+                  {course.icon}
                     <span className="text-sm text-gray-700">{course.name}</span>
-                    {course.level && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-100 text-success-800">
-                        {course.level}
+                  {course.level && (
+                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-success-100 text-success-800">
+                                          {course.level}
                       </span>
                     )}
                   </div>
                   {course.count > 0 && (
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                       {course.count}
-                    </span>
-                  )}
-                </Link>
-              ))}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  ))}
                                 </div>
                               </div>
                             </div>
@@ -340,15 +380,15 @@ function App() {
             {popularCourses.length > 0 ? (
                                 popularCourses.map((course, index) => (
                                   <Link
-                                    key={index}
-                                    to="/catalog"
+                key={index}
+                to="/catalog"
                                     onClick={() => setCoursesMenuOpen(false)}
                                     className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-soft transition-all"
                                   >
                                     <div className="flex items-center gap-2">
-                                      <span className="text-lg">{course.image}</span>
-                                      {course.icon}
-                                      <span className="text-sm font-medium text-gray-700">{course.name}</span>
+                                    <span className="text-lg">{course.image}</span>
+                    {course.icon}
+                                    <span className="text-sm font-medium text-gray-700">{course.name}</span>
                                     </div>
                                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                                       {course.count}
@@ -371,7 +411,11 @@ function App() {
                   <Link
                       key={item.path}
                       to={item.path}
-                    className="text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200"
+                    className={`font-medium transition-colors duration-200 ${
+                      isActiveTab(item.path) 
+                        ? 'text-red-600' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -381,8 +425,8 @@ function App() {
 
             {/* Right Side - Utility Buttons */}
             <div className="flex items-center space-x-4 ml-4">
-              {/* User Menu / Auth Buttons */}
-              <div className="flex items-center space-x-3">
+            {/* User Menu / Auth Buttons */}
+            <div className="flex items-center space-x-3">
           {user ? (
                 <div className="flex items-center space-x-3">
                   <span className="hidden sm:block text-gray-700 font-medium">
@@ -446,7 +490,7 @@ function App() {
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
+              {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden p-2 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
@@ -470,7 +514,11 @@ function App() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors duration-200"
+                  className={`block px-4 py-3 rounded-lg transition-colors duration-200 ${
+                    isActiveTab(item.path) 
+                      ? 'text-red-600 bg-red-50' 
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
                 >
                   <span className="font-medium">{item.label}</span>
                 </Link>

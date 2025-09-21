@@ -120,21 +120,6 @@ export function YouTubePlayer({
           className="absolute top-0 left-0 w-full h-full border-0 rounded-lg shadow-lg"
         />
       </div>
-
-      {/* Video Details */}
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-        <p className="text-sm text-gray-600">
-          <strong>Video ID:</strong> {youtubeInfo.videoId}
-        </p>
-        {title && (
-          <p className="text-sm text-gray-600 mt-1">
-            <strong>Title:</strong> {title}
-          </p>
-        )}
-        <p className="text-sm text-gray-600 mt-1">
-          <strong>Source:</strong> YouTube ({youtubeInfo.urlType})
-        </p>
-      </div>
     </div>
   )
 }
