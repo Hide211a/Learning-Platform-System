@@ -73,7 +73,7 @@ export function Quiz() {
     } else {
       // Завершуємо квіз та зберігаємо результат
       const score = calculateScore()
-      const percentage = Math.round((score / questions.length) * 100)
+      Math.round((score / questions.length) * 100)
       
       if (courseId && quizId) {
         saveQuizResult(

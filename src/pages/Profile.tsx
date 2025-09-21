@@ -7,8 +7,9 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
-import { AnimatedCounter } from '../components/ui'
+import { AnimatedCounter } from '../components/AnimatedCounter'
 import { useProgress } from '../features/progress/ProgressContext'
+import { saveUserProfile, getUserProfile } from '../firebase'
 
 export function Profile() {
   const { user } = useAuth()
@@ -17,14 +18,8 @@ export function Profile() {
     totalQuizzesCompleted, 
     getCourseProgress,
     getCourseProgressPercentage,
-    getCompletedStudentsCount,
-    getCourseRating,
-    savedCourses,
     isCourseSaved,
-    toggleSavedCourse,
-    userStreak,
-    markLessonComplete,
-    clearAllUserData
+    getCurrentStreak
   } = useProgress()
   const [isEditing, setIsEditing] = useState(false)
   const [activeCourseTab, setActiveCourseTab] = useState('active')
@@ -38,18 +33,41 @@ export function Profile() {
     linkedin: ''
   })
 
-  // Завантаження профілю з нової системи
+  // Завантаження профілю з Firebase
   useEffect(() => {
-    if (!user) return
-    
-    // Профіль тепер завантажується автоматично через userDataManager
-    // Просто встановлюємо базові дані
-    setProfileData(prev => ({
-      ...prev,
-      displayName: user?.displayName || user?.email?.split('@')[0] || '',
-      email: user?.email || prev.email
-    }))
-  }, [user])
+    const loadProfile = async () => {
+      if (user?.uid) {
+        console.log('🔄 Завантаження профілю для користувача:', user.uid)
+        try {
+          // Завантажуємо з Firebase
+          const firebaseResult = await getUserProfile(user.uid)
+          console.log('📥 Результат завантаження з Firebase:', firebaseResult)
+          
+          if (firebaseResult.success && firebaseResult.data) {
+            const firebaseProfile = firebaseResult.data
+            console.log('📋 Дані профілю з Firebase:', firebaseProfile)
+            setProfileData(prev => ({
+              ...prev,
+              displayName: firebaseProfile.displayName || prev.displayName,
+              bio: firebaseProfile.bio || prev.bio,
+              location: firebaseProfile.location || prev.location,
+              website: firebaseProfile.website || prev.website,
+              github: firebaseProfile.github || prev.github,
+              linkedin: firebaseProfile.linkedin || prev.linkedin,
+              email: user?.email || prev.email // Email завжди з AuthContext
+            }))
+            console.log('✅ Профіль завантажено з Firebase')
+          } else {
+            console.log('⚠️ Профіль не знайдено в Firebase, використовуємо базові дані')
+          }
+        } catch (error) {
+          console.log('❌ Помилка завантаження з Firebase:', error)
+        }
+      }
+    }
+
+    loadProfile()
+  }, [user?.uid, user?.email])
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -60,34 +78,26 @@ export function Profile() {
     }))
   }
 
-  const handleSave = () => {
-    if (!user) return
-    
-    // Профіль тепер зберігається через userDataManager автоматично
-    setIsEditing(false)
-    alert('Профіль успішно оновлено!')
-  }
-
-  // Функція для тестування streak (тимчасова)
-  const handleTestStreak = () => {
-    if (!user) return
-    
-    // Симулюємо завершення уроку для оновлення streak
-    markLessonComplete('test-course', 'test-lesson', 300) // 5 хвилин
-    alert('Streak оновлено! Перевірте статистику.')
-  }
-
-  // Функція для очищення всіх даних користувача (для дебагу)
-  const handleClearUserData = () => {
-    if (!user) return
-    
-    const confirmClear = confirm(`Ви впевнені, що хочете очистити ВСІ дані для користувача ${user.email}?\n\nЦе видалить:\n- Прогрес курсів\n- Результати квізів\n- Рейтинги\n- Збережені курси\n- Streak\n- Профіль\n\nВикористовується НОВА система збереження даних!`)
-    
-    if (confirmClear) {
-      // Використовуємо нову функцію очищення
-      clearAllUserData()
-      alert('Всі дані користувача очищено! Сторінка оновиться автоматично.')
-      window.location.reload()
+  const handleSave = async () => {
+    if (user?.uid) {
+      console.log('💾 Збереження профілю для користувача:', user.uid)
+      try {
+        // Зберігаємо тільки в Firebase
+        const result = await saveUserProfile(user.uid, profileData)
+        console.log('📤 Результат збереження в Firebase:', result)
+        
+        if (result.success) {
+          setIsEditing(false)
+          alert('Профіль успішно оновлено!')
+          console.log('✅ Профіль збережено в Firebase')
+        } else {
+          alert('Помилка збереження профілю. Спробуйте ще раз.')
+          console.log('❌ Помилка збереження в Firebase:', result.error)
+        }
+      } catch (error) {
+        alert('Помилка збереження профілю. Перевірте підключення до інтернету.')
+        console.log('❌ Помилка Firebase:', error)
+      }
     }
   }
 
@@ -102,32 +112,16 @@ export function Profile() {
 
   // Реальна статистика на основі прогресу
   const stats = (() => {
-    console.log('📊 РОЗРАХУНОК СТАТИСТИКИ для користувача:', user?.email)
-    console.log('  📚 Всього курсів:', courses.length)
-    console.log('  ✅ Завершених уроків:', totalLessonsCompleted)
-    console.log('  🧠 Завершених квізів:', totalQuizzesCompleted)
-    console.log('  🔥 Поточний streak:', userStreak.currentStreak)
-    
     const completedCourses = courses.filter(course => {
       const progressData = getCourseProgress(course.id)
-      const isCompleted = progressData?.isCompleted === true
-      if (isCompleted) {
-        console.log('  🎓 Завершений курс:', course.fields.title)
-      }
-      return isCompleted
+      return progressData?.isCompleted === true
     }).length
 
     const totalHours = Math.floor(totalLessonsCompleted * 1.5 + totalQuizzesCompleted * 0.5)
     const certificates = completedCourses // Сертифікат за кожен завершений курс
     
-    // Використовуємо реальний streak з ProgressContext
-    const currentStreak = userStreak.currentStreak
-
-    console.log('  📈 ФІНАЛЬНА СТАТИСТИКА:')
-    console.log('    - Завершених курсів:', completedCourses)
-    console.log('    - Годин навчання:', totalHours)
-    console.log('    - Сертифікатів:', certificates)
-    console.log('    - Днів streak:', currentStreak)
+    // Розрахунок streak (днів поспіль) на основі реальної активності
+    const currentStreak = getCurrentStreak()
 
     return {
       coursesCompleted: completedCourses,
@@ -303,26 +297,12 @@ export function Profile() {
                     )}
                   </div>
                   
-                  <div className="space-y-3">
-                    <Button
-                      onClick={() => setIsEditing(true)} 
-                      className="w-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-                    >
-                      Редагувати профіль
-                    </Button>
-                    <Button
-                      onClick={handleTestStreak} 
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-                    >
-                      🧪 Тест Streak
-                    </Button>
-                    <Button
-                      onClick={handleClearUserData} 
-                      className="w-full bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-                    >
-                      🗑️ Очистити дані
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => setIsEditing(true)} 
+                    className="w-full bg-black hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+                  >
+                    Редагувати профіль
+                  </Button>
                 </div>
               )}
             </Card>
@@ -453,49 +433,37 @@ export function Profile() {
                   </div>
                 ) : (
                   recentCourses.map((course) => (
-                  <Link key={course.id} to={`/courses/${course.id}`} className="block">
-                    <div className="flex items-center justify-between p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition-all duration-300 cursor-pointer">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-3">
-                          {course.title}
-                        </h4>
-                        <div className="flex items-center gap-3">
+                  <Link 
+                    key={course.id} 
+                    to={`/courses/${course.id}`}
+                    className="block"
+                  >
+                    <div className="flex items-center justify-between p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group">
+                    <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-3 group-hover:text-primary-600 transition-colors duration-300">
+                        {course.title}
+                      </h4>
+                      <div className="flex items-center gap-3">
                           <Progress value={typeof course.progress === 'number' ? course.progress : 0} className="flex-1" />
-                          <span className="text-sm font-medium text-gray-600 min-w-[3rem]">
+                        <span className="text-sm font-medium text-gray-600 min-w-[3rem]">
                             {typeof course.progress === 'number' ? course.progress : 0}%
-                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ml-6">
+                      {course.completed ? (
+                        <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-sm font-medium">Завершено</span>
                         </div>
-                      </div>
-                      <div className="ml-6">
-                        {activeCourseTab === 'saved' ? (
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              toggleSavedCourse(course.id)
-                            }}
-                          >
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Видалити з закладок
-                          </Button>
-                        ) : course.completed ? (
-                          <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="text-sm font-medium">Завершено</span>
-                          </div>
-                        ) : (
-                          <Button size="sm" className="bg-black hover:bg-gray-800 text-white">
-                            Продовжити
-                          </Button>
-                        )}
-                      </div>
+                      ) : (
+                        <Button size="sm" className="bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white">
+                          Продовжити
+                        </Button>
+                      )}
+                    </div>
                     </div>
                   </Link>
                   ))
@@ -503,9 +471,11 @@ export function Profile() {
               </div>
               
               <div className="mt-8 text-center">
+                <Link to="/catalog">
                 <Button variant="ghost" className="text-primary-600 hover:text-primary-700 hover:bg-primary-50">
                   Переглянути всі курси
                 </Button>
+                </Link>
               </div>
           </Card>
 

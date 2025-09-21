@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
@@ -29,7 +30,7 @@ export function CourseVideo() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Назад до курсу
-              </Button>
+          </Button>
             </Link>
             <div>
               <h1 className="text-xl font-semibold">{lesson.title}</h1>

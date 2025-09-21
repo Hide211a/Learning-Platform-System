@@ -10,7 +10,7 @@ import {
 import { ScrollToTop } from './components/ScrollToTop'
 
 function App() {
-  const { user, userRole, roleLoading, logout } = useAuth()
+  const { user, logout } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -75,7 +75,19 @@ function App() {
     // Спочатку перевіряємо збережене ім'я в профілі (прив'язано до користувача)
     try {
       const userId = user.uid
-      const savedProfile = localStorage.getItem(`userProfile_${userId}`)
+      let savedProfile = localStorage.getItem(`userProfile_${userId}`)
+      
+      // Якщо немає нового формату, перевіряємо старий
+      if (!savedProfile) {
+        const oldProfile = localStorage.getItem('userProfile')
+        if (oldProfile) {
+          // Мігруємо старий профіль до нового формату
+          localStorage.setItem(`userProfile_${userId}`, oldProfile)
+          localStorage.removeItem('userProfile') // Видаляємо старий
+          savedProfile = oldProfile
+        }
+      }
+      
       if (savedProfile) {
         const parsedProfile = JSON.parse(savedProfile)
         if (parsedProfile.displayName && parsedProfile.displayName.trim()) {
@@ -174,7 +186,7 @@ function App() {
     }))
 
   // Визначаємо, чи показувати адмін панель
-  const shouldShowAdmin = userRole === 'admin' || (roleLoading && user?.email === 'siidechaiin@gmail.com')
+  const shouldShowAdmin = user?.email === 'siidechaiin@gmail.com'
 
   const navigationItems = [
     { label: 'Головна', path: '/', icon: '🏠' },
@@ -191,16 +203,16 @@ function App() {
       <ScrollToTop />
       {/* Header - Mate Academy Style */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo - Left Side */}
-            <Link to="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">E</span>
+            <Link to="/" className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm sm:text-lg">E</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-900">Edu</span>
-                <span className="text-sm text-gray-600">Platform</span>
+                <span className="text-base sm:text-lg font-bold text-gray-900">Edu</span>
+                <span className="text-xs sm:text-sm text-gray-600 hidden xs:block">Platform</span>
               </div>
             </Link>
 
@@ -424,9 +436,9 @@ function App() {
             </nav>
 
             {/* Right Side - Utility Buttons */}
-            <div className="flex items-center space-x-4 ml-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 ml-2 sm:ml-4">
             {/* User Menu / Auth Buttons */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
           {user ? (
                 <div className="flex items-center space-x-3">
                   <span className="hidden sm:block text-gray-700 font-medium">
@@ -435,9 +447,9 @@ function App() {
                   <div className="relative">
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                      className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 text-gray-600 hover:text-gray-900 transition-colors duration-200"
                     >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </button>
@@ -493,9 +505,9 @@ function App() {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
+                className="md:hidden p-1.5 sm:p-2 text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-300 group"
               >
-                <svg className={`w-6 h-6 transition-transform duration-300 ${mobileMenuOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 ${mobileMenuOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
@@ -523,33 +535,8 @@ function App() {
                   <span className="font-medium">{item.label}</span>
                 </Link>
               ))}
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                {user ? (
-                  <div className="space-y-2">
-                    <div className="px-3 py-2">
-                      <p className="font-semibold text-gray-900">{getUserDisplayName()}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
-                    </div>
-                    <Link
-                      to="/profile"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <span>👤</span>
-                      <span>Профіль</span>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout()
-                        setMobileMenuOpen(false)
-                      }}
-                      className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <span>🚪</span>
-                      <span>Вийти</span>
-                    </button>
-                  </div>
-                ) : (
+              {!user && (
+                <div className="border-t border-gray-200 pt-2 mt-2">
                   <div className="space-y-2">
                     <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
                       <button className="w-full px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200">
@@ -562,8 +549,8 @@ function App() {
                       </button>
                     </Link>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

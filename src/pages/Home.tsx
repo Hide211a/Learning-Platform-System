@@ -95,7 +95,7 @@ export function Home() {
           </div>
           
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
             Навчайся
             <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               ефективно
@@ -103,14 +103,14 @@ export function Home() {
           </h1>
           
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
             Інтерактивні курси, персоналізоване навчання та детальна аналітика прогресу в одному місці
           </p>
           
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 px-4">
             <Link to={user ? "/catalog" : "/auth"}>
-              <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+              <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto">
                 Розпочати навчання
               </Button>
             </Link>
@@ -119,34 +119,34 @@ export function Home() {
               variant="outline" 
               size="lg" 
               onClick={() => scrollToSection('features')}
-              className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold rounded-full"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full w-full sm:w-auto"
             >
               Дізнатися більше
             </Button>
           </div>
 
           {/* Stats - New Design */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+          <div className="grid grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-2xl mx-auto px-4">
             <div className="text-center group">
-              <div className="text-4xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors duration-300">
                 <AnimatedCounter end={courses?.length || 0} />
-                <span className="text-3xl">+</span>
+                <span className="text-xl sm:text-2xl md:text-3xl">+</span>
               </div>
-              <div className="text-sm text-gray-500 font-medium uppercase tracking-wide">Курсів</div>
+              <div className="text-xs sm:text-sm text-gray-500 font-medium uppercase tracking-wide">Курсів</div>
             </div>
             <div className="text-center group">
-              <div className="text-4xl font-bold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors duration-300">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2 group-hover:text-purple-600 transition-colors duration-300">
                 <AnimatedCounter end={totalLessonsCompleted} />
-                <span className="text-3xl">+</span>
+                <span className="text-xl sm:text-2xl md:text-3xl">+</span>
               </div>
-              <div className="text-sm text-gray-500 font-medium uppercase tracking-wide">Уроків</div>
+              <div className="text-xs sm:text-sm text-gray-500 font-medium uppercase tracking-wide">Уроків</div>
             </div>
             <div className="text-center group">
-              <div className="text-4xl font-bold text-gray-900 mb-2 group-hover:text-pink-600 transition-colors duration-300">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2 group-hover:text-pink-600 transition-colors duration-300">
                 <AnimatedCounter end={totalQuizzesCompleted} />
-                <span className="text-3xl">+</span>
+                <span className="text-xl sm:text-2xl md:text-3xl">+</span>
               </div>
-              <div className="text-sm text-gray-500 font-medium uppercase tracking-wide">Тестів</div>
+              <div className="text-xs sm:text-sm text-gray-500 font-medium uppercase tracking-wide">Тестів</div>
             </div>
           </div>
         </div>
@@ -171,7 +171,7 @@ export function Home() {
                 const completedLessons = courseLessons.filter(lesson => lesson.completed)
                 const progress = courseLessons.length > 0 ? (completedLessons.length / courseLessons.length) * 100 : 0
                 return (
-                  <Card key={course.id} hover className="overflow-hidden">
+                  <Card key={course.id} hover className="overflow-hidden h-full">
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-secondary-100 flex items-center justify-center relative">
                       <img 
                         src={course.fields.coverUrl || 'https://via.placeholder.com/400x200?text=Course'}
@@ -182,11 +182,11 @@ export function Home() {
                         {Math.round(progress)}%
                       </div>
                     </div>
-                    <div className="p-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    <div className="p-6 flex flex-col h-full">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                         {course.fields.title}
                       </h3>
-                      <p className="text-gray-600 text-sm mb-4">
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
                         {course.fields.description}
                       </p>
                       <div className="mb-4">
@@ -196,11 +196,13 @@ export function Home() {
                           <span>{Math.round(progress)}%</span>
                         </div>
                       </div>
-                      <Link to={`/courses/${course.id}`}>
-                        <Button fullWidth className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700">
-                          Продовжити курс
-                        </Button>
-                      </Link>
+                      <div className="mt-auto">
+                        <Link to={`/courses/${course.id}`}>
+                          <Button fullWidth className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700">
+                            Продовжити курс
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </Card>
                 )
@@ -213,16 +215,16 @@ export function Home() {
       {/* Features Section - New Design */}
       <section id="features" className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-12 sm:mb-16 md:mb-20">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
               Чому обирають нас
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto px-4">
               Сучасні технології навчання для максимальної ефективності
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 md:gap-12">
             {[
               {
                 icon: '🎯',
@@ -250,15 +252,15 @@ export function Home() {
               }
             ].map((feature, index) => (
               <div key={index} className="group">
-                <div className="flex items-start space-x-6">
-                  <div className={`flex-shrink-0 w-16 h-16 rounded-2xl bg-${feature.color}-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                    <span className="text-2xl">{feature.icon}</span>
+                <div className="flex items-start space-x-4 sm:space-x-6">
+                  <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-2xl bg-${feature.color}-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <span className="text-lg sm:text-xl md:text-2xl">{feature.icon}</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-gray-700 transition-colors duration-300">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-gray-700 transition-colors duration-300">
                       {feature.title}
                     </h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                       {feature.description}
                     </p>
                   </div>
@@ -270,17 +272,17 @@ export function Home() {
       </section>
 
       {/* Featured Courses Section - New Design */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-16 sm:py-20 md:py-24 bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
               Популярні курси
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
               Оберіть курс, який відповідає вашим цілям та рівню підготовки
             </p>
             <Link to="/catalog">
-              <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-900 hover:text-white hover:border-gray-900 rounded-full px-8 py-3">
+              <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-900 hover:text-white hover:border-gray-900 rounded-full px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base">
                 Переглянути всі курси
               </Button>
             </Link>
@@ -304,8 +306,8 @@ export function Home() {
           ) : featuredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredCourses.map((course) => (
-                <div key={course.id} className="group">
-                  <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+                <div key={course.id} className="group h-full">
+                  <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
                     <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative overflow-hidden">
                       <img 
                         src={course.fields.coverUrl || 'https://via.placeholder.com/400x200?text=Course'}
@@ -314,7 +316,7 @@ export function Home() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
-                    <div className="p-6">
+                    <div className="p-6 flex flex-col flex-grow">
                       {course.fields.level && (
                         <div className="mb-3">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
@@ -322,17 +324,19 @@ export function Home() {
                           </span>
                         </div>
                       )}
-                      <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-gray-700 transition-colors duration-300">
+                      <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-gray-700 transition-colors duration-300 line-clamp-2">
                         {course.fields.title}
                       </h3>
-                      <p className="text-gray-600 text-sm mb-6 line-clamp-2 leading-relaxed">
+                      <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed flex-grow">
                         {course.fields.description}
                       </p>
-                      <Link to={`/courses/${course.id}`}>
-                        <Button fullWidth className="bg-gray-900 text-white hover:bg-gray-800 rounded-full py-3 font-semibold transition-all duration-300 group-hover:shadow-lg">
-                          Почати курс
-                        </Button>
-                      </Link>
+                      <div className="mt-auto">
+                        <Link to={`/courses/${course.id}`}>
+                          <Button fullWidth className="bg-gray-900 text-white hover:bg-gray-800 rounded-full py-3 font-semibold transition-all duration-300 group-hover:shadow-lg">
+                            Почати курс
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -349,29 +353,29 @@ export function Home() {
       </section>
 
       {/* Final CTA Section - New Design */}
-      <section className="py-24 bg-white relative overflow-hidden">
+      <section className="py-16 sm:py-20 md:py-24 bg-white relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50"></div>
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
             Готовий почати
             <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               навчання?
             </span>
           </h2>
-          <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed px-4">
             Приєднуйся до тисяч студентів, які вже розпочали свій шлях до нових знань
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
             <Link to={user ? "/catalog" : "/auth"}>
-              <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 px-8 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300">
+              <Button size="lg" className="bg-gray-900 text-white hover:bg-gray-800 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto">
                 {user ? "Перейти до курсів" : "Зареєструватися безкоштовно"}
               </Button>
             </Link>
               
             {!user && (
               <Link to="/auth">
-                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 text-lg font-semibold rounded-full">
+                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full w-full sm:w-auto">
                   Увійти в акаунт
                 </Button>
               </Link>
@@ -379,18 +383,18 @@ export function Home() {
           </div>
           
           {/* Trust indicators - Dynamic data */}
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <p className="text-sm text-gray-500 mb-4">Наша платформа в цифрах</p>
-            <div className="flex justify-center items-center space-x-8 opacity-60">
-              <div className="text-2xl font-bold text-gray-400">
+          <div className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-gray-200">
+            <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">Наша платформа в цифрах</p>
+            <div className="flex justify-center items-center space-x-4 sm:space-x-6 md:space-x-8 opacity-60">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-400">
                 <AnimatedCounter end={courses?.length || 0} />+
               </div>
               <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-2xl font-bold text-gray-400">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-400">
                 <AnimatedCounter end={totalLessonsCompleted} />+
               </div>
               <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-2xl font-bold text-gray-400">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-gray-400">
                 <AnimatedCounter end={totalQuizzesCompleted} />+
               </div>
             </div>

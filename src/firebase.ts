@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc, setDoc, onSnapshot } from 'firebase/firestore'
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, getDoc, query, orderBy, where, doc, setDoc, onSnapshot } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,20 +14,6 @@ export const auth = getAuth(app)
 export const googleProvider = new GoogleAuthProvider()
 export const db = getFirestore(app)
 
-// Типи для ролей користувачів
-export type UserRole = 'user' | 'admin' | 'moderator'
-
-export type FirestoreUser = {
-  uid: string
-  email: string
-  displayName: string
-  photoURL: string | null
-  role: UserRole
-  createdAt: any
-  lastLoginAt: any
-  isActive: boolean
-}
-
 // Функція для створення користувача в Firestore
 export const createUserInFirestore = async (user: any) => {
   try {
@@ -35,32 +21,154 @@ export const createUserInFirestore = async (user: any) => {
       throw new Error('Firestore не ініціалізований')
     }
 
+    console.log('🔄 Створення/оновлення користувача в Firestore:', user.uid)
     const userRef = doc(db, 'users', user.uid)
     
-    // Визначаємо роль користувача
-    let userRole: UserRole = 'user'
+    // Спочатку перевіряємо, чи існує користувач
+    const existingUser = await getDoc(userRef)
     
-    // Якщо це ваш email, робимо адміном
-    if (user.email === 'siidechaiin@gmail.com') {
-      userRole = 'admin'
-      console.log('🔑 Назначено роль адміна для:', user.email)
-    }
-    
-    await setDoc(userRef, {
+    const userData: any = {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName || user.email?.split('@')[0] || 'Користувач',
       photoURL: user.photoURL || null,
-      role: userRole,
-      createdAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
+      lastLoginAt: new Date().toISOString(),
       isActive: true
-    }, { merge: true }) // merge: true дозволяє оновлювати існуючі документи
+    }
+    
+    // Додаємо поля профілю тільки якщо користувач не існує
+    if (!existingUser.exists()) {
+      userData.createdAt = new Date().toISOString()
+      userData.bio = ''
+      userData.location = ''
+      userData.website = ''
+      userData.github = ''
+      userData.linkedin = ''
+      userData.updatedAt = new Date().toISOString()
+    }
+    
+    console.log('📋 Дані користувача для збереження:', userData)
+    await setDoc(userRef, userData, { merge: true }) // merge: true дозволяє оновлювати існуючі документи
 
-    console.log('✅ Користувач створений/оновлений в Firestore:', user.uid, 'Роль:', userRole)
-    return { success: true, role: userRole }
+    console.log('✅ Користувач створений/оновлений в Firestore:', user.uid)
+    return { success: true }
   } catch (error: any) {
     console.error('❌ Помилка створення користувача в Firestore:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Функція для збереження профілю користувача в Firestore
+export const saveUserProfile = async (userId: string, profileData: any) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const userRef = doc(db, 'users', userId)
+    const dataToSave = {
+      ...profileData,
+      updatedAt: new Date().toISOString()
+    }
+    
+    await setDoc(userRef, dataToSave, { merge: true })
+
+    console.log('✅ Профіль користувача збережено в Firestore:', userId)
+    return { success: true }
+  } catch (error: any) {
+    console.error('❌ Помилка збереження профілю:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Функція для отримання профілю користувача з Firestore
+export const getUserProfile = async (userId: string) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const userRef = doc(db, 'users', userId)
+    const userDoc = await getDoc(userRef)
+    
+    if (!userDoc.exists()) {
+      return { success: false, error: 'Користувач не знайдений' }
+    }
+
+    const userData = userDoc.data()
+    console.log('✅ Профіль користувача завантажено з Firestore:', userId)
+    return { success: true, data: userData }
+  } catch (error: any) {
+    console.error('❌ Помилка завантаження профілю:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Функція для збереження прогресу навчання в Firebase
+export const saveUserProgress = async (userId: string, courseId: string, progressData: any) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const progressRef = doc(db, 'userProgress', `${userId}_${courseId}`)
+    await setDoc(progressRef, {
+      userId,
+      courseId,
+      ...progressData,
+      updatedAt: new Date().toISOString()
+    }, { merge: true })
+
+    console.log('✅ Прогрес користувача збережено в Firestore:', userId, courseId)
+    return { success: true }
+  } catch (error: any) {
+    console.error('❌ Помилка збереження прогресу:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Функція для отримання прогресу користувача з Firebase
+export const getUserProgress = async (userId: string) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const progressQuery = query(collection(db, 'userProgress'), where('userId', '==', userId))
+    const progressSnapshot = await getDocs(progressQuery)
+    
+    const progress = progressSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    console.log('✅ Прогрес користувача завантажено з Firestore:', userId)
+    return { success: true, data: progress }
+  } catch (error: any) {
+    console.error('❌ Помилка завантаження прогресу:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Функція для отримання всіх користувачів (для адмін панелі)
+export const getAllUsers = async () => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const usersQuery = query(collection(db, 'users'))
+    const usersSnapshot = await getDocs(usersQuery)
+    
+    const users = usersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    console.log('✅ Користувачі завантажено з Firestore:', users.length)
+    return { success: true, data: users }
+  } catch (error: any) {
+    console.error('❌ Помилка завантаження користувачів:', error)
     return { success: false, error: error.message }
   }
 }
@@ -121,8 +229,17 @@ export type Testimonial = {
   content: string
   rating: number
   email?: string
+  avatar?: string
   approved: boolean
   createdAt: any
+}
+
+export type FirestoreRating = {
+  id?: string
+  courseId: string
+  userId: string
+  rating: number
+  createdAt: Date
 }
 
 // Функція для додавання відгуку
@@ -454,120 +571,6 @@ export const ensureCurrentUserInFirestore = async () => {
   }
 }
 
-// Тип для streak даних
-export type FirestoreStreak = {
-  currentStreak: number
-  longestStreak: number
-  lastLearningDate: any
-  streakStartDate: any
-  updatedAt: any
-}
-
-// Функція для збереження streak в Firestore
-export const saveStreakToFirestore = async (userId: string, streakData: Omit<FirestoreStreak, 'updatedAt'>) => {
-  try {
-    if (!db) {
-      throw new Error('Firestore не ініціалізований')
-    }
-
-    const streakRef = doc(db, 'user_streaks', userId)
-    await setDoc(streakRef, {
-      ...streakData,
-      updatedAt: serverTimestamp()
-    }, { merge: true })
-
-    console.log('✅ Streak збережено в Firestore для користувача:', userId)
-    return { success: true }
-  } catch (error: any) {
-    console.error('❌ Помилка збереження streak:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-// Функція для отримання streak з Firestore
-export const getStreakFromFirestore = async (userId: string): Promise<FirestoreStreak | null> => {
-  try {
-    if (!db) {
-      throw new Error('Firestore не ініціалізований')
-    }
-
-    const streakRef = doc(db, 'user_streaks', userId)
-    const streakDoc = await getDocs(collection(db, 'user_streaks'))
-    
-    // Знаходимо документ для конкретного користувача
-    let userStreak = null
-    streakDoc.forEach((doc) => {
-      if (doc.id === userId) {
-        userStreak = { id: doc.id, ...doc.data() } as FirestoreStreak
-      }
-    })
-
-    if (userStreak) {
-      console.log('✅ Streak завантажено з Firestore для користувача:', userId)
-      return userStreak
-    } else {
-      console.log('📝 Streak не знайдено в Firestore для користувача:', userId)
-      return null
-    }
-  } catch (error: any) {
-    console.error('❌ Помилка завантаження streak:', error)
-    return null
-  }
-}
-
-// Функція для отримання ролі користувача
-export const getUserRole = async (userId: string): Promise<UserRole> => {
-  try {
-    if (!db) {
-      throw new Error('Firestore не ініціалізований')
-    }
-
-    const userRef = doc(db, 'users', userId)
-    const userDoc = await getDocs(collection(db, 'users'))
-    
-    // Знаходимо документ для конкретного користувача
-    let userRole: UserRole = 'user'
-    let userFound = false
-    
-    userDoc.forEach((doc) => {
-      if (doc.id === userId) {
-        const userData = doc.data() as FirestoreUser
-        userRole = userData.role || 'user'
-        userFound = true
-        console.log('🔍 Знайдено користувача в Firestore:', doc.id, 'Роль:', userRole)
-      }
-    })
-
-    if (!userFound) {
-      console.log('⚠️ Користувач не знайдений в Firestore:', userId)
-      // Якщо користувач не знайдений, але це ваш email, повертаємо admin
-      const currentUser = auth.currentUser
-      if (currentUser?.email === 'siidechaiin@gmail.com') {
-        console.log('🔑 Автоматично призначаємо роль адміна для:', currentUser.email)
-        return 'admin'
-      }
-    }
-
-    console.log('✅ Роль користувача завантажена:', userId, 'Роль:', userRole)
-    return userRole
-  } catch (error: any) {
-    console.error('❌ Помилка завантаження ролі користувача:', error)
-    // Якщо помилка, але це ваш email, повертаємо admin
-    const currentUser = auth.currentUser
-    if (currentUser?.email === 'siidechaiin@gmail.com') {
-      console.log('🔑 Fallback: призначаємо роль адміна для:', currentUser.email)
-      return 'admin'
-    }
-    return 'user' // За замовчуванням звичайний користувач
-  }
-}
-
-// Функція для перевірки, чи є користувач адміном
-export const isUserAdmin = async (userId: string): Promise<boolean> => {
-  const role = await getUserRole(userId)
-  return role === 'admin'
-}
-
 // Тип для коментарів
 export type FirestoreComment = {
   id?: string
@@ -708,6 +711,91 @@ export const subscribeToComments = (courseId: string, callback: (comments: Fires
     return unsubscribe
   } catch (error: any) {
     console.error('❌ Помилка створення підписки на коментарі:', error)
+    return () => {}
+  }
+}
+
+// Функція для додавання рейтингу курсу
+export const addCourseRating = async (courseId: string, userId: string, rating: number) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const ratingsRef = collection(db, 'courseRatings')
+    const newRating = {
+      courseId,
+      userId,
+      rating,
+      createdAt: serverTimestamp()
+    }
+
+    await addDoc(ratingsRef, newRating)
+    console.log('✅ Рейтинг додано в Firestore')
+    return { success: true }
+  } catch (error: any) {
+    console.error('❌ Помилка додавання рейтингу:', error)
+    return { success: false, error: error.message || 'Невідома помилка' }
+  }
+}
+
+// Функція для отримання рейтингів курсу
+export const getCourseRatings = async (courseId: string) => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const ratingsRef = collection(db, 'courseRatings')
+    const q = query(ratingsRef, where('courseId', '==', courseId))
+    const querySnapshot = await getDocs(q)
+    
+    const ratings: FirestoreRating[] = []
+    querySnapshot.forEach((doc) => {
+      const data = doc.data()
+      ratings.push({
+        id: doc.id,
+        courseId: data.courseId,
+        userId: data.userId,
+        rating: data.rating,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date()
+      })
+    })
+
+    return ratings
+  } catch (error: any) {
+    console.error('❌ Помилка отримання рейтингів:', error)
+    return []
+  }
+}
+
+// Функція для підписки на рейтинги курсу
+export const subscribeToCourseRatings = (courseId: string, callback: (ratings: FirestoreRating[]) => void) => {
+  try {
+    if (!db) {
+      console.warn('Firestore не ініціалізований, використовуємо fallback')
+      return () => {}
+    }
+
+    const ratingsRef = collection(db, 'courseRatings')
+    const q = query(ratingsRef, where('courseId', '==', courseId))
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const ratings: FirestoreRating[] = []
+      querySnapshot.forEach((doc) => {
+        const data = doc.data()
+        ratings.push({
+          id: doc.id,
+          courseId: data.courseId,
+          userId: data.userId,
+          rating: data.rating,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date()
+        })
+      })
+      callback(ratings)
+    })
+  } catch (error: any) {
+    console.error('❌ Помилка підписки на рейтинги:', error)
     return () => {}
   }
 }

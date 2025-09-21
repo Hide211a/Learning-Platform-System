@@ -46,8 +46,8 @@ export function Footer() {
 
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="mb-6">
@@ -148,25 +148,25 @@ export function Footer() {
 
         {/* Newsletter Signup */}
         <div className="mt-12 pt-8 border-t border-gray-800">
-          <div className="max-w-md">
+          <div className="max-w-md mx-auto md:mx-0">
             <h4 className="text-lg font-semibold mb-4">Підпишіться на оновлення</h4>
             <p className="text-gray-400 mb-4">
               Отримуйте новини про нові курси та функції платформи
             </p>
             <form onSubmit={handleSubscribe} className="space-y-3">
-              <div className="flex">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Ваш email"
-                  className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
+                  className="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-l-lg sm:rounded-r-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
                   disabled={isSubmitting}
                 />
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-r-lg font-semibold transition-colors duration-300"
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg sm:rounded-l-none sm:rounded-r-lg font-semibold transition-colors duration-300 whitespace-nowrap"
                 >
                   {isSubmitting ? '⏳' : 'Підписатися'}
                 </button>
@@ -181,11 +181,11 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">
+        <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-gray-400 text-sm text-center md:text-left">
             © {currentYear} EduPlatform. Всі права захищені.
           </p>
-          <div className="flex items-center space-x-6 mt-4 md:mt-0">
+          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
             <span className="text-gray-400 text-sm">Створено з ❤️ в Україні</span>
             <div className="flex items-center space-x-2">
               <span className="text-gray-400 text-sm">🇺🇦</span>

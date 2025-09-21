@@ -1,13 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { User } from 'firebase/auth'
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider, createUserInFirestore, getUserRole, type UserRole } from '../../firebase'
+import { auth, googleProvider, createUserInFirestore } from '../../firebase'
 
 type AuthContextValue = {
   user: User | null
-  userRole: UserRole | null
   loading: boolean
-  roleLoading: boolean
   signInEmail: (email: string, password: string) => Promise<void>
   signUpEmail: (email: string, password: string) => Promise<void>
   signInGoogle: () => Promise<void>
@@ -18,9 +16,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
-  const [roleLoading, setRoleLoading] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -29,26 +25,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Автоматично створюємо/оновлюємо користувача в Firestore при вході
       if (u) {
-        setRoleLoading(true)
         try {
           await createUserInFirestore(u)
-          // Отримуємо роль користувача
-          const role = await getUserRole(u.uid)
-          setUserRole(role)
         } catch (error) {
           console.error('Помилка створення користувача в Firestore:', error)
-          // Fallback: якщо це ваш email, призначаємо роль адміна
-          if (u.email === 'siidechaiin@gmail.com') {
-            setUserRole('admin')
-          } else {
-            setUserRole('user')
-          }
-        } finally {
-          setRoleLoading(false)
         }
-      } else {
-        setUserRole(null)
-        setRoleLoading(false)
       }
     })
     return () => unsub()
@@ -56,9 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
-    userRole,
     loading,
-    roleLoading,
     async signInEmail(email, password) {
       try {
         await signInWithEmailAndPassword(auth, email, password)

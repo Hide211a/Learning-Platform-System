@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
-import { isUserAdmin } from '../firebase'
 
 interface AdminRouteProps {
   children: React.ReactNode
@@ -9,34 +7,9 @@ interface AdminRouteProps {
 
 export function AdminRoute({ children }: AdminRouteProps) {
   const { user, loading } = useAuth()
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
-  const [checking, setChecking] = useState(true)
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
-        setIsAdmin(false)
-        setChecking(false)
-        return
-      }
-
-      try {
-        const adminStatus = await isUserAdmin(user.uid)
-        setIsAdmin(adminStatus)
-        console.log('🔐 Перевірка адмін статусу:', user.email, 'Адмін:', adminStatus)
-      } catch (error) {
-        console.error('❌ Помилка перевірки адмін статусу:', error)
-        setIsAdmin(false)
-      } finally {
-        setChecking(false)
-      }
-    }
-
-    checkAdminStatus()
-  }, [user])
 
   // Показуємо завантаження поки перевіряємо
-  if (loading || checking) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -47,9 +20,35 @@ export function AdminRoute({ children }: AdminRouteProps) {
     )
   }
 
-  // Якщо користувач не авторизований або не адмін - редирект
-  if (!user || !isAdmin) {
-    return <Navigate to="/" replace />
+  // Якщо користувач не авторизований - редирект на авторизацію
+  if (!user) {
+    return <Navigate to="/auth" replace />
+  }
+
+  // Якщо користувач не адмін - показуємо повідомлення
+  if (user.email !== 'siidechaiin@gmail.com') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Доступ заборонено</h2>
+          <p className="text-gray-600 mb-6">
+            У вас немає прав доступу до адмін панелі. 
+            Зверніться до адміністратора для отримання доступу.
+          </p>
+          <button 
+            onClick={() => window.history.back()}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+          >
+            Повернутися назад
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Якщо адмін - показуємо контент

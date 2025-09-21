@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getApprovedTestimonials, type Testimonial } from '../firebase'
+import { getApprovedTestimonials } from '../firebase'
 
 interface TestimonialsProps {
   className?: string

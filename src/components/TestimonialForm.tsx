@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { addTestimonial } from '../firebase'
+import { addTestimonial, addCourseRating } from '../firebase'
+import { useAuth } from '../features/auth/AuthContext'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 
 interface TestimonialFormProps {
+  courseId?: string
   onSuccess?: () => void
 }
 
-export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
+export function TestimonialForm({ courseId, onSuccess }: TestimonialFormProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
     role: '',
@@ -27,6 +30,12 @@ export function TestimonialForm({ onSuccess }: TestimonialFormProps) {
       const result = await addTestimonial(formData)
       
       if (result.success) {
+        // Також зберігаємо рейтинг курсу, якщо є courseId
+        if (courseId) {
+          const userId = user?.uid || 'anonymous'
+          await addCourseRating(courseId, userId, formData.rating)
+        }
+        
         setMessage('✅ Дякуємо за ваш відгук! Він буде опублікований після модерації.')
         setFormData({
           name: '',
