@@ -72,14 +72,14 @@ export function Quiz() {
       setCurrentQuestion(currentQuestion + 1)
     } else {
       // Завершуємо квіз та зберігаємо результат
-      const score = calculateScore()
-      Math.round((score / questions.length) * 100)
+      const correctAnswers = calculateScore()
+      const scorePercentage = Math.round((correctAnswers / questions.length) * 100)
       
       if (courseId && quizId) {
         saveQuizResult(
           courseId,
           quizId,
-          score,
+          scorePercentage,  // Зберігаємо відсоток, а не кількість правильних відповідей
           questions.length,
           answers
         )

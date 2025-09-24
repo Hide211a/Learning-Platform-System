@@ -104,7 +104,7 @@ export function YouTubePlayer({
 
       {/* Video Player */}
       <div 
-        className="relative"
+        className="relative w-full max-w-full overflow-hidden"
         style={{ 
           width: width,
           height: height === 'auto' ? 0 : height,
@@ -117,7 +117,7 @@ export function YouTubePlayer({
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           loading="lazy"
-          className="absolute top-0 left-0 w-full h-full border-0 rounded-lg shadow-lg"
+          className="absolute top-0 left-0 w-full h-full border-0 rounded-lg shadow-lg max-w-full"
         />
       </div>
     </div>

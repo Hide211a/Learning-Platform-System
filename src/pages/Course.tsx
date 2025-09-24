@@ -5,6 +5,7 @@ import { getCourseById, getLessonsByCourseId, getQuizzesByCourseId } from '../li
 import { subscribeToCourseRatings } from '../firebase'
 import { useProgress } from '../features/progress/ProgressContext'
 import { useAuth } from '../features/auth/AuthContext'
+import { useSettings } from '../features/settings/SettingsContext'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
@@ -14,6 +15,7 @@ import { CertificateGenerator } from '../components/CertificateGenerator'
 
 export function Course() {
   const { courseId } = useParams()
+  const { settings } = useSettings()
   const [activeTab, setActiveTab] = useState('overview')
   const [commentText, setCommentText] = useState('')
   const [commentAuthor, setCommentAuthor] = useState('')
@@ -364,6 +366,19 @@ export function Course() {
                           onClick={() => {
                             if (courseMeta.progress === 100) {
                               setShowCertificate(true)
+                            } else {
+                              // Переходимо на таб уроків
+                              setActiveTab('lessons')
+                              // Плавний скрол до табу уроків
+                              setTimeout(() => {
+                                const lessonsTab = document.querySelector('[data-tab="lessons"]')
+                                if (lessonsTab) {
+                                  lessonsTab.scrollIntoView({ 
+                                    behavior: 'smooth', 
+                                    block: 'start' 
+                                  })
+                                }
+                              }, 100)
                             }
                           }}
                         >
@@ -550,16 +565,16 @@ export function Course() {
             )}
 
             {activeTab === 'lessons' && (
-              <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm" data-tab="lessons">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="p-3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl">
                     <span className="text-2xl">📚</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-3xl font-bold text-black">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-black">
                     Програма курсу
                   </h2>
-                    <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                    <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full self-start sm:self-auto">
                       {courseLessons.filter(lesson => {
                         const lessonProgress = getLessonProgress(courseId || '', lesson.id)
                         return lessonProgress?.completed || false
@@ -594,8 +609,8 @@ export function Course() {
                           : 'bg-white border-gray-200 hover:border-primary-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between p-6">
-                        <div className="flex items-center gap-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 gap-4 sm:gap-6">
+                        <div className="flex items-center gap-4 sm:gap-6">
                           <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
                             lesson.completed 
                               ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' 
@@ -612,13 +627,13 @@ export function Course() {
                             )}
                           </div>
                           
-                          <div className="flex-1">
-                            <h3 className={`text-lg font-bold mb-2 transition-colors ${
+                          <div className="flex-1 min-w-0">
+                            <h3 className={`text-base sm:text-lg font-bold mb-2 transition-colors ${
                               lesson.completed ? 'text-green-800' : 'text-black group-hover:text-primary-600'
                             }`}>
                               {lesson.title}
                             </h3>
-                            <div className="flex items-center gap-6 text-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
                               <span className={`flex items-center gap-2 px-3 py-1 rounded-full font-medium ${
                                 lesson.type === 'video' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
                               }`}>
@@ -633,7 +648,7 @@ export function Course() {
                                   {(() => {
                                     const quizResult = quizResults.find(result => result.courseId === courseId && result.quizId === lesson.id)
                                     if (quizResult) {
-                                      const score = Math.round((quizResult.score / quizResult.totalQuestions) * 100)
+                                      const score = quizResult.score // score вже в відсотках
                                       return `Завершено (${score}%)`
                                     }
                                     return 'Завершено'
@@ -649,7 +664,7 @@ export function Course() {
                           variant={lesson.completed ? "ghost" : "primary"}
                           disabled={!lesson.completed && index > 0 && !courseLessons[index - 1].completed}
                           onClick={() => handleStartLesson(lesson)}
-                          className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                          className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition-all duration-300 ${
                             lesson.completed 
                               ? 'border-2 border-green-300 text-green-700 hover:bg-green-50' 
                               : index > 0 && !courseLessons[index - 1].completed
@@ -669,21 +684,31 @@ export function Course() {
 
             {activeTab === 'quizzes' && (
               <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl">
-                    <span className="text-2xl">📝</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-3xl font-bold text-black">
-                      Тестування
-                    </h2>
-                    <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                      {courseQuizzes.filter(quiz => {
-                        return quizResults.some(result => result.courseId === courseId && result.quizId === quiz.id)
-                      }).length} з {courseQuizzes.length} квізів завершено
+                {!settings?.features.quizzes ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🚫</span>
                     </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Квізи вимкнено</h3>
+                    <p className="text-gray-600">Адміністратор вимкнув функцію квізів для цієї платформи.</p>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl">
+                        <span className="text-2xl">📝</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-3xl font-bold text-black">
+                          Тестування
+                        </h2>
+                        <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                          {courseQuizzes.filter(quiz => {
+                            return quizResults.some(result => result.courseId === courseId && result.quizId === quiz.id)
+                          }).length} з {courseQuizzes.length} квізів завершено
+                        </div>
+                      </div>
+                    </div>
                 
                 {courseQuizzes.length === 0 ? (
                   <div className="text-center py-12">
@@ -698,7 +723,7 @@ export function Course() {
                     {courseQuizzes.map((quiz) => {
                       const quizResult = quizResults.find(result => result.courseId === courseId && result.quizId === quiz.id)
                       const isCompleted = !!quizResult
-                      const score = quizResult ? Math.round((quizResult.score / quizResult.totalQuestions) * 100) : 0
+                      const score = quizResult ? quizResult.score : 0 // score вже в відсотках
                       
                       return (
                         <div 
@@ -731,7 +756,7 @@ export function Course() {
                                   {isCompleted && (
                                     <span className="flex items-center gap-2 px-3 py-1 rounded-full font-medium bg-green-100 text-green-800">
                                       🎯
-                                      {score}% ({quizResult.score}/{quizResult.totalQuestions})
+                                      {score}% ({Math.round(quizResult.score * quizResult.totalQuestions / 100)}/{quizResult.totalQuestions})
                                     </span>
                                   )}
                                 </div>
@@ -766,6 +791,8 @@ export function Course() {
                     })}
                   </div>
                 )}
+                  </>
+                )}
               </Card>
             )}
 
@@ -793,20 +820,32 @@ export function Course() {
 
             {activeTab === 'reviews' && (
               <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl">
-                    <span className="text-2xl">⭐</span>
+                {!settings?.features.ratings ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🚫</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Рейтинги вимкнено</h3>
+                    <p className="text-gray-600">Адміністратор вимкнув функцію рейтингів для цієї платформи.</p>
                   </div>
-                  <h2 className="text-3xl font-bold text-black">
-                    Відгуки про курс
-                  </h2>
-                </div>
-                
-                <div className="relative">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
-                    <TestimonialForm courseId={courseId} />
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="p-3 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl">
+                        <span className="text-2xl">⭐</span>
+                      </div>
+                      <h2 className="text-3xl font-bold text-black">
+                        Відгуки про курс
+                      </h2>
+                    </div>
+                    
+                    <div className="relative">
+                      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/20">
+                        <TestimonialForm courseId={courseId} />
+                      </div>
+                    </div>
+                  </>
+                )}
               </Card>
             )}
 

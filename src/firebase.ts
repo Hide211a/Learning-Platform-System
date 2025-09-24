@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 import { getFirestore, collection, addDoc, serverTimestamp, getDocs, getDoc, query, orderBy, where, doc, setDoc, onSnapshot } from 'firebase/firestore'
 
 const firebaseConfig = {
@@ -11,7 +11,6 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
-export const googleProvider = new GoogleAuthProvider()
 export const db = getFirestore(app)
 
 // Функція для створення користувача в Firestore
@@ -481,6 +480,29 @@ export type ContactMessage = {
   ipAddress?: string
 }
 
+export type PlatformSettings = {
+  platformName: string
+  supportEmail: string
+  features: {
+    quizzes: boolean
+    ratings: boolean
+    comments: boolean
+    analytics: boolean
+  }
+  limits: {
+    maxCourses: number
+    maxUsers: number
+    maxLessonsPerCourse: number
+  }
+  security: {
+    minRatingForAccess: number
+    requireEmailVerification: boolean
+    allowGuestAccess: boolean
+  }
+  updatedAt: Date
+  updatedBy: string
+}
+
 // Функція для відправки контактного повідомлення
 export const sendContactMessage = async (messageData: Omit<ContactMessage, 'id' | 'createdAt' | 'status'>) => {
   try {
@@ -796,6 +818,157 @@ export const subscribeToCourseRatings = (courseId: string, callback: (ratings: F
     })
   } catch (error: any) {
     console.error('❌ Помилка підписки на рейтинги:', error)
+    return () => {}
+  }
+}
+
+// Функції для роботи з налаштуваннями платформи
+
+// Отримання налаштувань платформи
+export const getPlatformSettings = async (): Promise<{ success: boolean; data?: PlatformSettings; error?: string }> => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const settingsRef = doc(db, 'platformSettings', 'main')
+    const settingsDoc = await getDoc(settingsRef)
+    
+    if (settingsDoc.exists()) {
+      const data = settingsDoc.data()
+      const settings: PlatformSettings = {
+        platformName: data.platformName || 'LMS Platform',
+        supportEmail: data.supportEmail || 'support@lms-platform.com',
+        features: {
+          quizzes: data.features?.quizzes ?? true,
+          ratings: data.features?.ratings ?? true,
+          comments: data.features?.comments ?? true,
+          analytics: data.features?.analytics ?? true
+        },
+        limits: {
+          maxCourses: data.limits?.maxCourses ?? 50,
+          maxUsers: data.limits?.maxUsers ?? 1000,
+          maxLessonsPerCourse: data.limits?.maxLessonsPerCourse ?? 20
+        },
+        security: {
+          minRatingForAccess: data.security?.minRatingForAccess ?? 0,
+          requireEmailVerification: data.security?.requireEmailVerification ?? false,
+          allowGuestAccess: data.security?.allowGuestAccess ?? true
+        },
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        updatedBy: data.updatedBy || 'system'
+      }
+      
+      console.log('✅ Налаштування платформи завантажено')
+      return { success: true, data: settings }
+    } else {
+      // Створюємо дефолтні налаштування
+      const defaultSettings: PlatformSettings = {
+        platformName: 'LMS Platform',
+        supportEmail: 'support@lms-platform.com',
+        features: {
+          quizzes: true,
+          ratings: true,
+          comments: true,
+          analytics: true
+        },
+        limits: {
+          maxCourses: 50,
+          maxUsers: 1000,
+          maxLessonsPerCourse: 20
+        },
+        security: {
+          minRatingForAccess: 0,
+          requireEmailVerification: false,
+          allowGuestAccess: true
+        },
+        updatedAt: new Date(),
+        updatedBy: 'system'
+      }
+      
+      await setDoc(settingsRef, {
+        ...defaultSettings,
+        updatedAt: new Date()
+      })
+      
+      console.log('✅ Створено дефолтні налаштування платформи')
+      return { success: true, data: defaultSettings }
+    }
+  } catch (error: any) {
+    console.error('❌ Помилка отримання налаштувань платформи:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Оновлення налаштувань платформи
+export const updatePlatformSettings = async (
+  settings: Partial<PlatformSettings>, 
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    if (!db) {
+      throw new Error('Firestore не ініціалізований')
+    }
+
+    const settingsRef = doc(db, 'platformSettings', 'main')
+    
+    const updateData = {
+      ...settings,
+      updatedAt: new Date(),
+      updatedBy: userId
+    }
+    
+    await setDoc(settingsRef, updateData, { merge: true })
+    
+    console.log('✅ Налаштування платформи оновлено')
+    return { success: true }
+  } catch (error: any) {
+    console.error('❌ Помилка оновлення налаштувань платформи:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Підписка на зміни налаштувань платформи
+export const subscribeToPlatformSettings = (callback: (settings: PlatformSettings) => void) => {
+  try {
+    if (!db) {
+      console.error('❌ Firestore не ініціалізований')
+      return () => {}
+    }
+
+    const settingsRef = doc(db, 'platformSettings', 'main')
+    
+    return onSnapshot(settingsRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data()
+        const settings: PlatformSettings = {
+          platformName: data.platformName || 'LMS Platform',
+          supportEmail: data.supportEmail || 'support@lms-platform.com',
+          features: {
+            quizzes: data.features?.quizzes ?? true,
+            ratings: data.features?.ratings ?? true,
+            comments: data.features?.comments ?? true,
+            analytics: data.features?.analytics ?? true
+          },
+          limits: {
+            maxCourses: data.limits?.maxCourses ?? 50,
+            maxUsers: data.limits?.maxUsers ?? 1000,
+            maxLessonsPerCourse: data.limits?.maxLessonsPerCourse ?? 20
+          },
+          security: {
+            minRatingForAccess: data.security?.minRatingForAccess ?? 0,
+            requireEmailVerification: data.security?.requireEmailVerification ?? false,
+            allowGuestAccess: data.security?.allowGuestAccess ?? true
+          },
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          updatedBy: data.updatedBy || 'system'
+        }
+        
+        callback(settings)
+      }
+    })
+  } catch (error: any) {
+    console.error('❌ Помилка підписки на налаштування платформи:', error)
     return () => {}
   }
 }

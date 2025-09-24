@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { subscribeToNewsletter } from '../firebase'
+import { useSettings } from '../features/settings/SettingsContext'
 
 export function Footer() {
+  const { settings } = useSettings()
   const currentYear = new Date().getFullYear()
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -118,31 +120,27 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
+
+          {/* Contact Info */}
           <div>
-            <h4 className="text-lg font-semibold mb-6">Підтримка</h4>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/help" className="text-gray-400 hover:text-white transition-colors duration-300">
-                  Довідка
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-gray-400 hover:text-white transition-colors duration-300">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300">
-                  Конфіденційність
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-300">
-                  Умови використання
-                </Link>
-              </li>
-            </ul>
+            <h4 className="text-lg font-semibold mb-6">Контакти</h4>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <span className="text-lg">📧</span>
+                <a 
+                  href={`mailto:${settings?.supportEmail || 'support@lms-platform.com'}`}
+                  className="text-gray-400 hover:text-white transition-colors duration-300"
+                >
+                  {settings?.supportEmail || 'support@lms-platform.com'}
+                </a>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="text-lg">🌐</span>
+                <span className="text-gray-400">
+                  {settings?.platformName || 'LMS Platform'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -183,7 +181,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-400 text-sm text-center md:text-left">
-            © {currentYear} EduPlatform. Всі права захищені.
+            © {currentYear} {settings?.platformName || 'EduPlatform'}. Всі права захищені.
           </p>
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6">
             <span className="text-gray-400 text-sm">Створено з ❤️ в Україні</span>

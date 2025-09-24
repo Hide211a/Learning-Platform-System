@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from './features/auth/AuthContext'
+import { useSettings } from './features/settings/SettingsContext'
 import { useQuery } from '@tanstack/react-query'
 import { getCourses } from './lib/contentful'
 import { 
@@ -11,6 +12,7 @@ import { ScrollToTop } from './components/ScrollToTop'
 
 function App() {
   const { user, logout } = useAuth()
+  const { settings } = useSettings()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -211,8 +213,12 @@ function App() {
                 <span className="text-white font-bold text-sm sm:text-lg">E</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-base sm:text-lg font-bold text-gray-900">Edu</span>
-                <span className="text-xs sm:text-sm text-gray-600 hidden xs:block">Platform</span>
+                <span className="text-base sm:text-lg font-bold text-gray-900">
+                  {settings?.platformName?.split(' ')[0] || 'Edu'}
+                </span>
+                <span className="text-xs sm:text-sm text-gray-600 hidden xs:block">
+                  {settings?.platformName?.split(' ').slice(1).join(' ') || 'Platform'}
+                </span>
               </div>
             </Link>
 

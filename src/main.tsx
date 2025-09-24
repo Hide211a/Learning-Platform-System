@@ -6,6 +6,7 @@ import './index.css'
 import App from './App'
 import { AuthProvider } from './features/auth/AuthContext'
 import { ProgressProvider } from './features/progress/ProgressContext'
+import { SettingsProvider } from './features/settings/SettingsContext'
 import ErrorBoundary from './components/ErrorBoundary'
 
 const Home = lazy(() => import('./pages/Home.tsx'))
@@ -54,7 +55,8 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ProgressProvider>
-            <Suspense fallback={
+            <SettingsProvider>
+              <Suspense fallback={
               <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div className="text-center">
                   <div className="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
@@ -62,8 +64,9 @@ createRoot(document.getElementById('root')!).render(
                 </div>
               </div>
             }>
-              <RouterProvider router={router} />
-            </Suspense>
+                <RouterProvider router={router} />
+              </Suspense>
+            </SettingsProvider>
           </ProgressProvider>
         </AuthProvider>
       </QueryClientProvider>

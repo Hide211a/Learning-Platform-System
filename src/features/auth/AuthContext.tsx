@@ -1,14 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { User } from 'firebase/auth'
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth'
-import { auth, googleProvider, createUserInFirestore } from '../../firebase'
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
+import { auth, createUserInFirestore } from '../../firebase'
 
 type AuthContextValue = {
   user: User | null
   loading: boolean
   signInEmail: (email: string, password: string) => Promise<void>
   signUpEmail: (email: string, password: string) => Promise<void>
-  signInGoogle: () => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -77,9 +76,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         throw error
       }
-    },
-    async signInGoogle() {
-      await signInWithPopup(auth, googleProvider)
     },
     async logout() {
       await signOut(auth)
