@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { getPlatformSettings, updatePlatformSettings, subscribeToPlatformSettings } from '../../firebase'
 import type { PlatformSettings } from '../../firebase'
 import { useAuth } from '../auth/AuthContext'
